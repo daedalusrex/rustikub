@@ -71,16 +71,19 @@ pub mod types {
 
 
     // #[derive(PartialEq)] // TODO interesting behavior of Vectors
+    #[derive(Debug)]
     struct Boneyard {
         // TODO, new constructor here is important. Perhaps a map? instead?
-        bones: Vec<Tile>
+        pub bones: Vec<Tile>
     }
 
     impl Boneyard {
+        // TODO, FYI, this new keyword thing is not actually special for Rust, probs better to call it like new game or init
         fn new() -> Option<Boneyard> {
-            let mut jokers: Vec<Tile> = Vec::new();
-            jokers.push(JokersWild);
-            jokers.push(JokersWild);
+            let mut tiles: Vec<Tile> = Vec::new();
+            // tiles.push(JokersWild);
+            // tiles.push(JokersWild);
+            tiles.append(&mut vec![JokersWild, JokersWild]);
 
             for color in Color::iter() {
                 for num in Number::iter() {
@@ -88,7 +91,7 @@ pub mod types {
                 }
 
             }
-            return Option::None
+            return Some(Boneyard { bones: tiles})
         }
 
         fn draw_one() -> (Tile, Boneyard) {
@@ -134,11 +137,43 @@ pub mod types {
 
     #[cfg(test)]
     mod test_boneyard {
-        use crate::rummikub_domain::types::Boneyard;
+        use std::borrow::Borrow;
+        use std::ops::Deref;
+        use crate::rummikub_domain::types::{Boneyard, Color, Tile};
 
         #[test]
-        fn build_boneyard() {
+        fn build_new_boneyard() {
             let mut bones = Boneyard::new();
+            // The fancy if let construct
+            if let Some(initial) = bones {
+                //106 tiles (8 sets of tiles 1-13 in four colours, and 2 joker tiles)
+                assert_eq!(initial.bones.len(), 106);
+                let foo = initial.bones; // Butterfly Meme: Is this a reference? Or a copy?
+                let bar = foo.iter().filter(|&x1| {
+                    match x1 {
+                        Tile::RegularTile(Color::Red, _) => true,
+                        Tile::JokersWild => false,
+                        _ => false,
+                    }
+                });
+
+                /// if let expression crunches brain. For learning, English words for this terse line
+                /// Using the abbreviated from of the exhaustive match expression, check this tile input,
+                /// which happens to be a composite enum, such that only succeed in the condition where it's color matches our condition (blue),
+                /// Then since it matches, execute the following expression (statement? block? -> *terminology*)
+                /// since this case for us is just boolean, return true, otherwise which since the match statement
+                /// is using the terse form representing ALL OTHER possible states, return false.
+                /// this is just a predicate.
+                fn is_blue(t: &Tile) -> bool {
+                    if let Tile::RegularTile(Color::Blue, _) = t { true } else { false }
+                }
+
+                let bazing = foo.iter().filter(|&x| {is_blue(x)});
+                println!("Expect 26, Found Red Count: {:?}",bar.count());
+
+            }
+
+
 
         }
 
