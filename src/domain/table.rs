@@ -3,8 +3,8 @@ use std::collections::HashSet;
 
 enum Set {
     // There are two kinds of sets, either a group or a run
-    Group,
-    Run,
+    Group(Group),
+    Run(Run),
 }
 struct Group {
     //A set of either three or four tiles of the same number in different colors.

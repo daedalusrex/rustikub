@@ -4,13 +4,13 @@ use strum::IntoEnumIterator;
 
 // #[derive(PartialEq)] // TODO interesting behavior of Vectors
 #[derive(Debug)]
-struct Boneyard {
+pub struct Boneyard {
     // TODO, new constructor here is important. Perhaps a map? instead?
     pub bones: Vec<Tile>,
 }
 
 impl Boneyard {
-    fn new_game() -> Self {
+    pub fn new_game() -> Self {
         let mut tiles = vec![JokersWild, JokersWild]; // tradeoffs vs push push?
         for color in Color::iter() {
             for num in Number::iter() {
@@ -21,7 +21,7 @@ impl Boneyard {
         Boneyard { bones: tiles }
     }
 
-    fn draw_one() -> (Tile, Boneyard) {
+    pub fn draw_one() -> (Tile, Boneyard) {
         // TODO here, but with the idea of immutablity, when drawing, we get a whole new boneyard
         (
             RegularTile(ColoredNumber {
