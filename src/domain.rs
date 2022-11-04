@@ -1,4 +1,5 @@
 pub mod boneyard;
+pub mod sets;
 pub mod table;
 pub mod tiles;
 

@@ -1,3 +1,7 @@
+#![allow(dead_code, unused_imports, unused_variables)] //TODO remove during clean up phase
+
+extern crate core;
+
 mod domain;
 
 fn main() {

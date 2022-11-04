@@ -22,7 +22,7 @@ impl Boneyard {
     }
 
     pub fn draw_one() -> (Tile, Boneyard) {
-        // TODO here, but with the idea of immutablity, when drawing, we get a whole new boneyard
+        // TODO here, but with the idea of immutability, when drawing, we get a whole new boneyard
         (
             RegularTile(ColoredNumber {
                 color: Color::Red,
@@ -47,6 +47,7 @@ mod test_boneyard {
         let mut state = Boneyard::new_game();
         let bones = state.bones; // Butterfly Meme: Is this a reference? Or a copy? -> No! It's a MOVE!
         assert_eq!(bones.len(), 106);
+
         for c in Color::iter() {
             let count = bones.iter().filter(|t| t.is_color(c)).count();
             assert_eq!(count, 26);
@@ -57,5 +58,11 @@ mod test_boneyard {
         }
         let jokers = bones.iter().filter(|t| t.is_joker()).count();
         assert_eq!(jokers, 2);
+
+        // Same test, but now, with Closures!
+        // Note, the moving and ownership here is bad, but is an excellent example of syntax
+        let pred = |tile: &Tile| tile.is_color(Color::Red);
+        let count = bones.into_iter().filter(pred).count();
+        assert_eq!(count, 26)
     }
 }
