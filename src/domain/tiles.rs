@@ -2,6 +2,7 @@ use rand::seq::IteratorRandom;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter, EnumString};
 use Tile::{JokersWild, RegularTile};
+use crate::domain::tiles::Number::{Eight, Eleven, Five, Four, Nine, One, Seven, Six, Ten, Thirteen, Three, Twelve, Two};
 
 #[derive(EnumIter, EnumCount, Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Color {
@@ -17,6 +18,18 @@ impl Color {
             return col;
         }
         Color::Black
+    }
+
+    ///There are many ways to "add one" to enums, this is very pedantic, but
+    /// also explicit, and avoids any possible issues with conversions of primitives
+    pub fn next(&self) -> Self {
+        use Color::*;
+        match self {
+            Red => Blue,
+            Blue => Orange,
+            Orange => Black,
+            Black => Red,
+        }
     }
 }
 
@@ -48,6 +61,47 @@ impl Number {
         }
         Number::One
     }
+
+    ///There are many ways to "add one" to enums, this is very pedantic, but
+    /// also explicit, and avoids any possible issues with conversions of primitives
+    pub fn next(&self) -> Number {
+        use Number::*;
+        match self {
+            One => Two,
+            Two => Three,
+            Three => Four,
+            Four => Five,
+            Five => Six,
+            Six => Seven,
+            Seven => Eight,
+            Eight => Nine,
+            Nine => Ten,
+            Ten => Eleven,
+            Eleven => Twelve,
+            Twelve => Thirteen,
+            Thirteen => Thirteen, // TODO Potentially Not Obvious Behavior!!!
+        }
+    }
+
+    ///There are many ways to "minus one" to enums, this is very pedantic, but
+    /// also explicit, and avoids any possible issues with conversions of primitives
+    pub fn prev(&self) -> Number {
+        use Number::*;
+        match self {
+            One => One, // TODO Potentially Not Obvious Behavior!!!
+            Two => One,
+            Three => Two,
+            Four => Three,
+            Five => Four,
+            Six => Five,
+            Seven => Six,
+            Eight => Seven,
+            Nine => Eight,
+            Ten => Nine,
+            Eleven => Ten,
+            Twelve => Eleven,
+            Thirteen => Twelve,
+        }
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq, Copy)]
