@@ -2,7 +2,6 @@ use rand::seq::IteratorRandom;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter, EnumString};
 use Tile::{JokersWild, RegularTile};
-use crate::domain::tiles::Number::{Eight, Eleven, Five, Four, Nine, One, Seven, Six, Ten, Thirteen, Three, Twelve, Two};
 
 #[derive(EnumIter, EnumCount, Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Color {
@@ -79,7 +78,7 @@ impl Number {
             Ten => Eleven,
             Eleven => Twelve,
             Twelve => Thirteen,
-            Thirteen => Thirteen, // TODO Potentially Not Obvious Behavior!!!
+            Thirteen => Thirteen, // TODO Potentially Not Obvious Behavior, consider instead return Some(Number)!!!
         }
     }
 
@@ -88,7 +87,7 @@ impl Number {
     pub fn prev(&self) -> Number {
         use Number::*;
         match self {
-            One => One, // TODO Potentially Not Obvious Behavior!!!
+            One => One, // TODO Potentially Not Obvious Behavior, consider instead return Some(Number)!!!
             Two => One,
             Three => Two,
             Four => Three,
@@ -102,6 +101,7 @@ impl Number {
             Twelve => Eleven,
             Thirteen => Twelve,
         }
+    }
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq, Copy)]
@@ -226,7 +226,7 @@ mod tile_tests {
     #[test]
     fn random_tiles() {
         let rt = Tile::any_regular();
-        if let (Tile::RegularTile(foo)) = rt {
+        if let Tile::RegularTile(foo) = rt {
             assert!(true)
         } else {
             assert!(false)

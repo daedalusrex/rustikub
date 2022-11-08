@@ -1,5 +1,5 @@
-use std::vec;
 use crate::domain::tiles::Tile;
+use std::vec;
 
 pub struct Run {
     // a set of three or more consecutive numbers all in the same color.
@@ -29,8 +29,8 @@ impl IntoIterator for Run {
 
 #[cfg(test)]
 mod run_tests {
-    use crate::domain::tiles::{Color, ColoredNumber, Number};
     use super::*;
+    use crate::domain::tiles::{Color, ColoredNumber, Number};
 
     #[test]
     fn run_equality() {
