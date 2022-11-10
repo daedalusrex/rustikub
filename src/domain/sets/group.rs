@@ -13,7 +13,7 @@ pub struct Group {
 }
 
 impl Group {
-    fn parse(candidates: Vec<Tile>) -> Option<Group> {
+    pub fn parse(candidates: Vec<Tile>) -> Option<Group> {
         if candidates.len() > MAX_GROUP_SIZE || candidates.len() < MIN_GROUP_SIZE {
             return None;
         }
@@ -21,12 +21,30 @@ impl Group {
         let mut group_number: Number = Number::One;
         let mut num_jokers: u8 = 0;
         let mut cols = HashSet::new();
+        let first_num: Number;
+        if let Some(first_tile) = candidates.first() {
+            if let Tile::RegularTile(first_cn) = first_tile {
+                first_num = first_cn.num;
+            } else {
+                return None;
+            }
+        }
+        else {
+            return None
+        }
+
         // Find the first regular tile, that has a number
         for tile in candidates {
             match tile {
                 Tile::JokersWild => num_jokers += 1,
                 Tile::RegularTile(cn) => {
+                    if first_num != cn.num {
+                        return None;
+                    }
                     group_number = cn.num;
+                    if cols.contains(&cn.color) {
+                        return None;
+                    }
                     cols.insert(cn.color);
                 }
             }
@@ -34,14 +52,18 @@ impl Group {
         if num_jokers > 2 {
             return None;
         }
-        Some(Group{num: group_number, colors: cols, jokers: num_jokers })
+        Some(Group {
+            num: group_number,
+            colors: cols,
+            jokers: num_jokers,
+        })
     }
 
-    fn count(&self) -> u8 {
+    pub fn count(&self) -> u8 {
         self.colors.len() as u8
     }
 
-    fn contains(&self, c: Color) -> bool {
+    pub fn contains(&self, c: Color) -> bool {
         self.colors.contains(&c)
     }
 }
@@ -93,13 +115,50 @@ pub mod group_tests {
         }
     }
 
-    ///Test cases:
-    /// size constraints
-    /// fail different numbers
-    /// fail same colors
     #[test]
     fn test_parsing_reject_bad() {
-        // TODO
+        // Size Constraints
+        let normal = object_mother_good_group_of_three();
+        let mut too_big = normal.clone();
+        too_big.append(&mut vec![Tile::any_regular(), Tile::any_regular()]);
+        let mut too_small = normal.clone();
+        too_small.pop();
+        assert_eq!(None, Group::parse(too_big));
+        assert_eq!(None, Group::parse(too_small));
+
+        // Different Numbers, Allowable Colors
+        let bad_nums = vec![
+            RegularTile(ColoredNumber {
+                color: Color::Red,
+                num: Number::One,
+            }),
+            RegularTile(ColoredNumber {
+                color: Color::Blue,
+                num: Number::Two,
+            }),
+            RegularTile(ColoredNumber {
+                color: Color::Black,
+                num: Number::Three,
+            }),
+        ];
+        assert_eq!(None, Group::parse(bad_nums));
+
+        // Same Numbers, Duplicate Colors
+        let duped_colors = vec![
+            RegularTile(ColoredNumber {
+                color: Color::Red,
+                num: Number::One,
+            }),
+            RegularTile(ColoredNumber {
+                color: Color::Red,
+                num: Number::One,
+            }),
+            RegularTile(ColoredNumber {
+                color: Color::Black,
+                num: Number::One,
+            }),
+        ];
+        assert_eq!(None, Group::parse(duped_colors));
     }
 
     #[test]

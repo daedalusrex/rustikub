@@ -9,6 +9,9 @@ pub struct Run {
 
 impl Run {
     fn parse(candidates: Vec<Tile>) -> Option<Run> {
+        // TODO consider using the Result<T, E> type instead of Option here. it's built for this
+        //  https://doc.rust-lang.org/rust-by-example/error/result.html
+        // Also enables try! macro and ? operator
         // for tile in candidates {
         //     todo!()
         // }
