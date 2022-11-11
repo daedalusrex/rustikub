@@ -114,6 +114,13 @@ impl ColoredNumber {
     pub fn new(c: Color, n: Number) -> Self {
         ColoredNumber { color: c, num: n }
     }
+
+    pub fn get_rand() -> Self {
+        ColoredNumber {
+            color: Color::get_rand(),
+            num: Number::get_rand(),
+        }
+    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord,Clone)]
