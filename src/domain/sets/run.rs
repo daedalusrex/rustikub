@@ -1,23 +1,26 @@
+use std::collections::LinkedList;
 use crate::domain::tiles::Tile;
 use std::vec;
+use super::ParseError;
 
 pub struct Run {
     // a set of three or more consecutive numbers all in the same color.
     // The number 1 is always played as the lowest number, it cannot follow the number 13.
     members: Vec<Tile>, // TODO, Consider a LinkedList
+    
 }
 
 impl Run {
-    fn parse(candidates: Vec<Tile>) -> Option<Run> {
-        // TODO consider using the Result<T, E> type instead of Option here. it's built for this
-        //  https://doc.rust-lang.org/rust-by-example/error/result.html
-        // Also enables try! macro and ? operator
-        // for tile in candidates {
-        //     todo!()
-        // }
-        Option::Some(Run {
-            members: candidates.clone(),
-        })
+    /// Using the Result<T, E> type instead of Option here. It's better suited for this? than Option
+    //  https://doc.rust-lang.org/rust-by-example/error/result.html
+    fn parse(candidates: Vec<Tile>) -> Result<Run, ParseError> {
+
+        let anon = || { ParseError::OutOfOrder};
+        Err(anon())
+        //
+        // Option::Some(Run {
+        //     members: candidates.clone(),
+        // })
     }
 }
 

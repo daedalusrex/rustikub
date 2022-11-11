@@ -9,3 +9,13 @@ pub enum Set {
     Group(Group),
     Run(Run),
 }
+
+/// Certain types of erros that can occur when attempting to parse a collection of tiles
+/// into a particular type of Set
+pub enum ParseError {
+    TooManyTiles,
+    TooFewTiles,
+    DuplicateColors,
+    DuplicateNumbers,
+    OutOfOrder,
+}
