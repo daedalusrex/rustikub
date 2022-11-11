@@ -3,7 +3,7 @@ use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter, EnumString};
 use Tile::{JokersWild, RegularTile};
 
-#[derive(EnumIter, EnumCount, Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(EnumIter, EnumCount, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Color {
     Red,
     Blue,
@@ -104,10 +104,10 @@ impl Number {
     }
 }
 
-#[derive(Debug, Hash, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct ColoredNumber {
-    pub num: Number,
     pub color: Color,
+    pub num: Number,
 }
 
 impl ColoredNumber {
@@ -116,7 +116,7 @@ impl ColoredNumber {
     }
 }
 
-#[derive(Debug, Hash, Clone)]
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord,Clone)]
 pub enum Tile {
     JokersWild,
     RegularTile(ColoredNumber),

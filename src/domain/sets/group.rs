@@ -1,4 +1,4 @@
-use crate::domain::tiles::{Color, Number, Tile};
+use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
 use std::collections::{HashMap, HashSet};
 
 const MAX_GROUP_SIZE: usize = 4;
@@ -22,7 +22,11 @@ impl Group {
         let mut num_jokers: u8 = 0;
         let mut cols = HashSet::new();
         let first_num: Number;
-        if let Some(first_tile) = candidates.first() {
+
+
+        // TODO Simplify with ?: https://doc.rust-lang.org/rust-by-example/error/option_unwrap/question_mark.html
+        let first_no_joke = candidates.iter().filter(|tile| !tile.is_joker()).next();
+        if let Some(first_tile) = first_no_joke {
             if let Tile::RegularTile(first_cn) = first_tile {
                 first_num = first_cn.num;
             } else {
@@ -66,6 +70,20 @@ impl Group {
     pub fn contains(&self, c: Color) -> bool {
         self.colors.contains(&c)
     }
+
+    pub fn components(&self) -> Vec<Tile> {
+        let mut composite_tiles: Vec<Tile> = vec![];
+        for joker in 0..self.jokers {
+            composite_tiles.push(Tile::JokersWild);
+        }
+        for color in &self.colors {
+            composite_tiles.push(Tile::RegularTile(ColoredNumber{
+                color: *color,
+                num: self.num
+            }))
+        }
+        composite_tiles
+    }
 }
 
 #[cfg(test)]
@@ -105,7 +123,7 @@ pub mod group_tests {
             }
 
             //Colors in candidates match colors in Group
-            for tile in success {
+            for tile in &success {
                 if let RegularTile(cn) = tile {
                     assert!(good_group.contains(cn.color));
                 } else {
@@ -113,6 +131,12 @@ pub mod group_tests {
                 }
             }
         }
+
+        let mut with_joker = success.clone();
+        with_joker.insert(0, JokersWild);
+        let joker_group = Group::parse(with_joker.clone());
+        assert_ne!(None, joker_group);
+
     }
 
     #[test]
@@ -182,5 +206,23 @@ pub mod group_tests {
         just_one_joker.pop();
         just_one_joker.push(JokersWild);
         assert_ne!(None, Group::parse(just_one_joker));
+    }
+
+    #[test]
+    fn composites_match() {
+        let mut origin = object_mother_good_group_of_three();
+        origin.sort();
+        let my_group = Group::parse(origin.clone()).unwrap();
+        let mut output = my_group.components();
+        output.sort();
+        assert_eq!(origin, output);
+
+        let mut with_joker = origin.clone();
+        with_joker.push(JokersWild);
+        with_joker.sort();
+        let joker_group = Group::parse(with_joker.clone()).unwrap();
+        let mut joker_out = joker_group.components();
+        joker_out.sort();
+        assert_eq!(with_joker, joker_out);
     }
 }
