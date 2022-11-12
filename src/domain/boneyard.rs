@@ -44,7 +44,7 @@ mod test_boneyard {
     /// //106 tiles in the game, including 104 numbered tiles (valued 1 to 13 in four different colors, two copies of each) and two jokers
     #[test]
     fn verify_initial_state() {
-        let mut state = Boneyard::new_game();
+        let state = Boneyard::new_game();
         let bones = state.bones; // Butterfly Meme: Is this a reference? Or a copy? -> No! It's a MOVE!
         assert_eq!(bones.len(), 106);
 

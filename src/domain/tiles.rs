@@ -3,6 +3,9 @@ use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter, EnumString};
 use Tile::{JokersWild, RegularTile};
 
+#[derive(Debug)]
+pub struct RummikubError;
+
 #[derive(EnumIter, EnumCount, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Color {
     Red,
@@ -120,6 +123,16 @@ impl ColoredNumber {
             color: Color::get_rand(),
             num: Number::get_rand(),
         }
+    }
+
+    pub fn next(&self) -> Result<Self, RummikubError> {
+        if self.num < Number::Thirteen {
+            return Ok(ColoredNumber {
+                num: self.num.next(),
+                color: self.color,
+            })
+        }
+        Err(RummikubError)
     }
 }
 

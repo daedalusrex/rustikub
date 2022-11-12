@@ -20,4 +20,5 @@ pub enum ParseError {
     DistinctColors,
     DuplicateNumbers,
     OutOfOrder,
+    IllegalJokers,
 }

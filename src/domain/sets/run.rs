@@ -1,6 +1,7 @@
 use std::collections::{HashSet, LinkedList};
-use crate::domain::tiles::{Number, Tile, Color};
+use crate::domain::tiles::{Number, Tile, Color, ColoredNumber};
 use std::vec;
+use super::ParseError::*;
 use super::ParseError;
 
 const MAX_RUN_SIZE: usize = 13;
@@ -22,7 +23,49 @@ impl Run {
     /// Using the Result<T, E> type instead of Option here. It's better suited for this? than Option
     //  https://doc.rust-lang.org/rust-by-example/error/result.html
     pub fn parse(candidates: Vec<Tile>) -> Result<Run, ParseError> {
-        Ok(Run { start: Number::One, end: Number::One, color: Color::Red, jokers: Default::default() })
+        if candidates.len() < MIN_RUN_SIZE {
+            return Err(TooFewTiles)
+        }
+        if candidates.len() > MAX_RUN_SIZE {
+            return Err(TooManyTiles)
+        }
+
+
+        let mut iter_of_only_regular = candidates.iter().filter(|tile| !tile.is_joker());
+        let first_no_joke = iter_of_only_regular.next().ok_or(IllegalJokers);
+        let first_cn: ColoredNumber;
+        if let Tile::RegularTile(cn) = first_no_joke.unwrap() {
+            first_cn = cn.clone();
+        } else {
+            return Err(IllegalJokers);
+        }
+
+        let mut jokers: HashSet<Number> = HashSet::new();
+        let looped_cn: ColoredNumber;
+        let mut found_first_cn = false;
+
+        // Go through the vector and check the constraints
+        for (idx, tile) in candidates.iter().enumerate() {
+            match tile {
+                Tile::JokersWild => {
+                    // TODO whooopsie, more thinking needed
+                }
+                Tile::RegularTile(tile_cn) => {
+                    if tile_cn.color != first_cn.color {
+                        return Err(DistinctColors)
+                    }
+                }
+            }
+        }
+
+
+
+        Ok(Run{
+            start: first_cn.num, // TODO Wrong
+            end: first_cn.num, // TODO Wrong
+            color: first_cn.color,
+            jokers: Default::default()
+        })
     }
 
     pub fn decompose(&self) -> Vec<Tile> {
@@ -39,7 +82,7 @@ mod run_parsing {
     use super::*;
     use crate::domain::tiles::Number::*;
     use crate::domain::sets::ParseError::*;
-    use crate::domain::tiles::Tile::RegularTile;
+    use crate::domain::tiles::Tile::{JokersWild, RegularTile};
     use crate::domain::tiles::{Color, ColoredNumber, Number};
     use strum::IntoEnumIterator;
 
@@ -68,6 +111,35 @@ mod run_parsing {
         assert_eq!(success.start, first_cn.num);
         assert_eq!(success.color, first_cn.color);
         // TODO more precise success metrics
+    }
+
+    #[test]
+    fn proper_joker_handling() {
+        let first = ColoredNumber::new(Color::get_rand(), Two);
+        let second = first.next().unwrap();
+        let third = second.next().unwrap();
+        let success = vec![RegularTile(first), RegularTile(second), RegularTile(third), JokersWild];
+        assert!(Run::parse(success.clone()).is_ok());
+
+        let mut too_many = success.clone();
+        too_many.append( &mut vec![JokersWild, JokersWild]);
+        assert!(Run::parse(success.clone()).is_err());
+    }
+
+
+    #[test]
+    fn reject_bad_joker_edges_of_run() {
+        let first = ColoredNumber::new(Color::get_rand(), Eleven);
+        let second = first.next().unwrap();
+        let third = second.next().unwrap();
+        let success = vec![RegularTile(first), RegularTile(second), RegularTile(third), JokersWild];
+        assert!(Run::parse(success.clone()).is_err());
+
+        let first = ColoredNumber::new(Color::get_rand(), One);
+        let second = first.next().unwrap();
+        let third = second.next().unwrap();
+        let success = vec![JokersWild, RegularTile(first), RegularTile(second), RegularTile(third)];
+        assert!(Run::parse(success.clone()).is_err());
     }
 
     #[test]
@@ -130,7 +202,7 @@ mod run_parsing {
     #[test]
     fn rejects_1_after_13()
     {
-        let mut first = ColoredNumber::new(Color::get_rand(), Twelve);
+        let first = ColoredNumber::new(Color::get_rand(), Twelve);
         let second = ColoredNumber::new(first.color, Thirteen);
         let third = ColoredNumber::new(first.color, One);
         let end_at_13: Vec<Tile> = vec![RegularTile(first), RegularTile(second), RegularTile(third)];
@@ -141,7 +213,7 @@ mod run_parsing {
     #[test]
     fn rejects_out_of_order_random_numbers()
     {
-        let mut first = ColoredNumber::new(Color::get_rand(), Number::get_rand());
+        let first = ColoredNumber::new(Color::get_rand(), Number::get_rand());
         let second = ColoredNumber::new(first.color, Number::get_rand());
         let third = ColoredNumber::new(first.color, Number::get_rand());
         let random_order: Vec<Tile> = vec![RegularTile(first), RegularTile(second), RegularTile(third)];
