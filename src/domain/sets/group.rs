@@ -73,7 +73,7 @@ impl Group {
         self.colors.contains(&c)
     }
 
-    pub fn components(&self) -> Vec<Tile> {
+    pub fn decompose(&self) -> Vec<Tile> {
         let mut composite_tiles: Vec<Tile> = vec![];
         for joker in 0..self.jokers {
             composite_tiles.push(Tile::JokersWild);
@@ -86,6 +86,8 @@ impl Group {
         }
         composite_tiles
     }
+
+    pub fn get_group_num(&self) -> Number { self.num }
 }
 
 #[cfg(test)]
@@ -215,7 +217,7 @@ pub mod group_tests {
         let mut origin = object_mother_good_group_of_three();
         origin.sort();
         let my_group = Group::parse(origin.clone()).unwrap();
-        let mut output = my_group.components();
+        let mut output = my_group.decompose();
         output.sort();
         assert_eq!(origin, output);
 
@@ -223,7 +225,7 @@ pub mod group_tests {
         with_joker.push(JokersWild);
         with_joker.sort();
         let joker_group = Group::parse(with_joker.clone()).unwrap();
-        let mut joker_out = joker_group.components();
+        let mut joker_out = joker_group.decompose();
         joker_out.sort();
         assert_eq!(with_joker, joker_out);
     }

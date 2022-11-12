@@ -12,10 +12,12 @@ pub enum Set {
 
 /// Certain types of erros that can occur when attempting to parse a collection of tiles
 /// into a particular type of Set
+#[derive(PartialEq, Debug)]
 pub enum ParseError {
     TooManyTiles,
     TooFewTiles,
     DuplicateColors,
+    DistinctColors,
     DuplicateNumbers,
     OutOfOrder,
 }
