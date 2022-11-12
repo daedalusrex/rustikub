@@ -1,16 +1,25 @@
 use std::collections::LinkedList;
-use crate::domain::tiles::Tile;
+use crate::domain::tiles::{Number, Tile, Color};
 use std::vec;
 use super::ParseError;
 
 const MAX_RUN_SIZE: usize = 13;
 const MIN_RUN_SIZE: usize = 3;
 
+/// A set of three or more consecutive numbers all in the same color.
+/// The number 1 is always played as the lowest number, it cannot follow the number 13.
 #[derive(Debug, PartialEq)]
 pub struct Run {
     // a set of three or more consecutive numbers all in the same color.
     // The number 1 is always played as the lowest number, it cannot follow the number 13.
     members: Vec<Tile>, // TODO, Consider a LinkedList
+    start: Number,
+    end: Number,
+    // Collection of Possible break points?
+    color: Color,
+    // How to represent jokers?
+    // A vector of tiles?
+    // A function that returns current joker representations? -> because easier to break runs apart and so on?
 
 }
 

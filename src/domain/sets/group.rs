@@ -4,15 +4,17 @@ use std::collections::{HashMap, HashSet};
 const MAX_GROUP_SIZE: usize = 4;
 const MIN_GROUP_SIZE: usize = 3;
 
+///A set of either three or four tiles of the same number in different colors.
 #[derive(Debug, PartialEq)]
 pub struct Group {
-    //A set of either three or four tiles of the same number in different colors.
     num: Number,
     colors: HashSet<Color>,
     jokers: u8,
 }
 
 impl Group {
+    /// Checks the given candidate tiles against a logical constraints that define a Group
+    /// If sucessful returns a Group composed of those tiles, otherwise None
     pub fn parse(candidates: Vec<Tile>) -> Option<Group> {
         if candidates.len() > MAX_GROUP_SIZE || candidates.len() < MIN_GROUP_SIZE {
             return None;
