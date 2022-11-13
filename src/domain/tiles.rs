@@ -136,7 +136,7 @@ impl ColoredNumber {
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord,Clone)]
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub enum Tile {
     JokersWild,
     RegularTile(ColoredNumber),
