@@ -1,11 +1,10 @@
 use super::tiles::Tile::{JokersWild, RegularTile};
-use super::tiles::*; // TODO use * bad.
+use super::tiles::*;
 use strum::IntoEnumIterator;
 
-// #[derive(PartialEq)] // TODO interesting behavior of Vectors
-#[derive(Debug)]
+///Starts with 106 tiles (8 sets of tiles 1-13 in four colours (2 of each), and 2 joker tiles)
+#[derive(Debug, PartialEq)]
 pub struct Boneyard {
-    // TODO, new constructor here is important. Perhaps a map? instead?
     pub bones: Vec<Tile>,
 }
 
@@ -22,6 +21,7 @@ impl Boneyard {
     }
 
     pub fn draw_one() -> (Tile, Boneyard) {
+        todo!();
         // TODO here, but with the idea of immutability, when drawing, we get a whole new boneyard
         (
             RegularTile(ColoredNumber {
@@ -40,8 +40,8 @@ mod test_boneyard {
 
     use strum::IntoEnumIterator;
 
-    ///106 tiles (8 sets of tiles 1-13 in four colours (2 of each), and 2 joker tiles)
-    /// //106 tiles in the game, including 104 numbered tiles (valued 1 to 13 in four different colors, two copies of each) and two jokers
+
+    ///106 tiles in the game, including 104 numbered tiles (valued 1 to 13 in four different colors, two copies of each) and two jokers
     #[test]
     fn verify_initial_state() {
         let state = Boneyard::new_game();

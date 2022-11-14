@@ -1,11 +1,13 @@
 use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
 use std::collections::{HashMap, HashSet};
+use crate::domain::ScoreValue;
 
 const MAX_GROUP_SIZE: usize = 4;
 const MIN_GROUP_SIZE: usize = 3;
+const MAX_JOKERS_IN_GROUP: u8 = 2;
 
 ///A set of either three or four tiles of the same number in different colors.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Group {
     num: Number,
     colors: HashSet<Color>,
@@ -55,7 +57,7 @@ impl Group {
                 }
             }
         }
-        if num_jokers > 2 {
+        if num_jokers > MAX_JOKERS_IN_GROUP {
             return None;
         }
         Some(Group {
@@ -88,6 +90,11 @@ impl Group {
     }
 
     pub fn get_group_num(&self) -> Number { self.num }
+
+    pub fn total_value(&self) -> ScoreValue {
+        let one_num = self.num.get_value();
+        one_num * (self.jokers + self.colors.len() as u8)
+    }
 }
 
 #[cfg(test)]
@@ -228,5 +235,15 @@ pub mod group_tests {
         let mut joker_out = joker_group.decompose();
         joker_out.sort();
         assert_eq!(with_joker, joker_out);
+    }
+
+    #[test]
+    fn scoring_vals() {
+        let known_group = Group::parse(vec![
+            RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
+            RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
+            JokersWild
+        ]).unwrap();
+        assert_eq!(ScoreValue{total: 15}, known_group.total_value())
     }
 }

@@ -4,6 +4,7 @@ pub mod run;
 use group::Group;
 use run::Run;
 
+#[derive(Debug, Clone)]
 pub enum Set {
     // There are two kinds of sets, either a group or a run
     Group(Group),

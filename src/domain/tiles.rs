@@ -2,9 +2,8 @@ use rand::seq::IteratorRandom;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter, EnumString};
 use Tile::{JokersWild, RegularTile};
-
-#[derive(Debug)]
-pub struct RummikubError;
+use crate::domain::{RummikubError, ScoreValue};
+use crate::domain::tiles::Number::{Eight, Eleven, Five, Four, Nine, One, Seven, Six, Ten, Thirteen, Three, Twelve, Two};
 
 #[derive(EnumIter, EnumCount, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Color {
@@ -104,6 +103,26 @@ impl Number {
             Twelve => Eleven,
             Thirteen => Twelve,
         }
+    }
+
+    pub fn get_value(&self) -> ScoreValue {
+        use Number::*;
+        let total: u16 = match self {
+            One => 1,
+            Two => 2,
+            Three => 3,
+            Four => 4,
+            Five => 5,
+            Six => 6,
+            Seven => 7,
+            Eight => 8,
+            Nine => 9,
+            Ten => 10,
+            Eleven => 11,
+            Twelve => 12,
+            Thirteen => 13,
+        };
+        ScoreValue{total}
     }
 }
 

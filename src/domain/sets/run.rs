@@ -1,6 +1,7 @@
 use std::collections::{HashSet, LinkedList};
 use crate::domain::tiles::{Number, Tile, Color, ColoredNumber};
 use std::vec;
+use crate::domain::ScoreValue;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use super::ParseError::*;
 use super::ParseError;
@@ -11,7 +12,7 @@ const MAX_JOKERS_IN_RUN: usize = 2;
 
 /// A set of three or more consecutive numbers all in the same color.
 /// The number 1 is always played as the lowest number, it cannot follow the number 13.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Run {
     // Idea here is to decompose what defines a run, and not be dependent on implementation details of std containers
     start: Number,
@@ -138,6 +139,16 @@ impl Run {
     pub fn contains(&self, n: Number) -> bool { self.start <= n && self.end >= n }
 
     pub fn get_run_color(&self) -> Color { self.color }
+
+    pub fn total_value(&self) -> ScoreValue {
+        let mut score_sum = ScoreValue{total: 0};
+        let mut current = self.start;
+        while current <= self.end {
+            score_sum = score_sum + current.get_value();
+            current = current.next();
+        }
+        score_sum
+    }
 }
 
 #[cfg(test)]
@@ -301,6 +312,22 @@ mod run_parsing {
         let third = ColoredNumber::new(first.color, Number::get_rand());
         let random_order: Vec<Tile> = vec![RegularTile(first), RegularTile(second), RegularTile(third)];
         assert!(Run::parse(random_order).is_err());
+    }
+
+    #[test]
+    fn score_value_is_correct() {
+        let first = ColoredNumber::new(Color::get_rand(), Five);
+        let second = ColoredNumber::new(first.color, Six);
+        let third = ColoredNumber::new(first.color, Seven);
+
+        let actual_sum = ScoreValue{total: 5 + 6 + 7};
+        let known_run = Run::parse(vec![RegularTile(first), RegularTile(second), RegularTile(third)]).unwrap();
+        assert_eq!(known_run.total_value(), known_run.total_value());
+
+        let actual_sum_with_joker = ScoreValue{total: 5 + 6 + 7 + 8};
+        let with_joker = Run::parse(vec![RegularTile(first), RegularTile(second), RegularTile(third), JokersWild]).unwrap();
+        assert_eq!(actual_sum_with_joker, with_joker.total_value());
+
     }
 }
 
