@@ -3,7 +3,7 @@ use super::tiles::*;
 use strum::IntoEnumIterator;
 
 ///Starts with 106 tiles (8 sets of tiles 1-13 in four colours (2 of each), and 2 joker tiles)
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Boneyard {
     pub bones: Vec<Tile>,
 }
@@ -21,15 +21,16 @@ impl Boneyard {
     }
 
     pub fn draw_one() -> (Tile, Boneyard) {
-        todo!();
         // TODO here, but with the idea of immutability, when drawing, we get a whole new boneyard
-        (
-            RegularTile(ColoredNumber {
-                color: Color::Red,
-                num: Number::Twelve,
-            }),
-            Boneyard { bones: Vec::new() },
-        )
+        // (
+        //     RegularTile(ColoredNumber {
+        //         color: Color::Red,
+        //         num: Number::Twelve,
+        //     }),
+        //     Boneyard { bones: Vec::new() },
+        // )
+        todo!()
+
     }
 }
 

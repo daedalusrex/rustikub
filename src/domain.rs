@@ -1,3 +1,7 @@
+use std::fmt;
+use std::fmt::Formatter;
+use crate::game_loop::GameResult;
+
 pub mod boneyard;
 pub mod sets;
 pub mod table;
@@ -10,7 +14,7 @@ pub mod initial_meld;
 #[derive(Debug)]
 pub struct RummikubError;
 
-#[derive(Debug, PartialEq, PartialOrd, Copy, Clone)]
+#[derive(Debug, PartialEq, Ord, Eq, PartialOrd, Copy, Clone)]
 pub struct ScoreValue {
     total: u16
 }
@@ -23,6 +27,11 @@ impl ScoreValue {
     }
 }
 
+impl fmt::Display for ScoreValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.total)
+    }
+}
 
 impl std::ops::Add<ScoreValue> for ScoreValue {
     type Output = ScoreValue;

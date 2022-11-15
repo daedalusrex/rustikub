@@ -12,5 +12,7 @@ fn main() {
     println!("Now Playing A Game With 4 Players");
     let conf = GameConfig{num_players: 4};
     let game1 = GameState::init_game(conf);
-    let end_game = game1.play_game();
+    let result = main_game_loop(game1);
+    println!("Game Complete! Result: {}",result);
+
 }
