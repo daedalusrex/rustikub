@@ -1,9 +1,11 @@
+use crate::domain::tiles::Number::{
+    Eight, Eleven, Five, Four, Nine, One, Seven, Six, Ten, Thirteen, Three, Twelve, Two,
+};
+use crate::domain::{RummikubError, ScoreValue};
 use rand::seq::IteratorRandom;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter, EnumString};
 use Tile::{JokersWild, RegularTile};
-use crate::domain::{RummikubError, ScoreValue};
-use crate::domain::tiles::Number::{Eight, Eleven, Five, Four, Nine, One, Seven, Six, Ten, Thirteen, Three, Twelve, Two};
 
 #[derive(EnumIter, EnumCount, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Color {
@@ -122,7 +124,7 @@ impl Number {
             Twelve => 12,
             Thirteen => 13,
         };
-        ScoreValue{total}
+        ScoreValue { total }
     }
 }
 
@@ -149,7 +151,7 @@ impl ColoredNumber {
             return Ok(ColoredNumber {
                 num: self.num.next(),
                 color: self.color,
-            })
+            });
         }
         Err(RummikubError)
     }

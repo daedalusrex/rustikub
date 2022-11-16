@@ -1,6 +1,6 @@
 use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
-use std::collections::{HashMap, HashSet};
 use crate::domain::ScoreValue;
+use std::collections::{HashMap, HashSet};
 
 const MAX_GROUP_SIZE: usize = 4;
 const MIN_GROUP_SIZE: usize = 3;
@@ -27,7 +27,6 @@ impl Group {
         let mut cols = HashSet::new();
         let first_num: Number;
 
-
         // TODO Simplify with ?: https://doc.rust-lang.org/rust-by-example/error/option_unwrap/question_mark.html
         let first_no_joke = candidates.iter().filter(|tile| !tile.is_joker()).next();
         if let Some(first_tile) = first_no_joke {
@@ -36,9 +35,8 @@ impl Group {
             } else {
                 return None;
             }
-        }
-        else {
-            return None
+        } else {
+            return None;
         }
 
         // Find the first regular tile, that has a number
@@ -81,15 +79,17 @@ impl Group {
             composite_tiles.push(Tile::JokersWild);
         }
         for color in &self.colors {
-            composite_tiles.push(Tile::RegularTile(ColoredNumber{
+            composite_tiles.push(Tile::RegularTile(ColoredNumber {
                 color: *color,
-                num: self.num
+                num: self.num,
             }))
         }
         composite_tiles
     }
 
-    pub fn get_group_num(&self) -> Number { self.num }
+    pub fn get_group_num(&self) -> Number {
+        self.num
+    }
 
     pub fn total_value(&self) -> ScoreValue {
         let one_num = self.num.get_value();
@@ -147,7 +147,6 @@ pub mod group_tests {
         with_joker.insert(0, JokersWild);
         let joker_group = Group::parse(with_joker.clone());
         assert_ne!(None, joker_group);
-
     }
 
     #[test]
@@ -242,8 +241,9 @@ pub mod group_tests {
         let known_group = Group::parse(vec![
             RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
             RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
-            JokersWild
-        ]).unwrap();
-        assert_eq!(ScoreValue{total: 15}, known_group.total_value())
+            JokersWild,
+        ])
+        .unwrap();
+        assert_eq!(ScoreValue { total: 15 }, known_group.total_value())
     }
 }
