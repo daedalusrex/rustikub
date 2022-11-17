@@ -151,6 +151,83 @@ impl Run {
         }
         score_sum
     }
+
+    /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
+    /// with the tile attached. Requested Spot is only considered for Jokers, which could be placed
+    /// on either end of the run. If none is provided the highest value location will be chosen
+    pub fn add_tile(&self, tile: &Tile, requested_spot: Option<Number>) -> Option<Self> {
+
+        // Clojure logic for where to put Joker, only if requested spot is not provided
+        let find_highest_target = || -> Option<Number> {
+            return if self.end == Number::Thirteen {
+                if self.start == Number::One {
+                    None // Ridiculous but possible edge case
+                } else {
+                    Some(self.start.prev())
+                }
+            } else {
+                Some(self.end.next())
+            };
+        };
+
+        let is_new_location_valid = |num: Option<Number>| -> bool {
+            match num {
+                None => false,
+                Some(num) => {
+                    return (num != self.end && num != self.start)
+                        && (num == self.end.next() || num == self.start.prev())
+                }
+            }
+        };
+
+        let new_delimiters = |cand: Number| -> (Number, Number) {
+            let mut new_start = self.start;
+            let mut new_end = self.end;
+            if cand > self.end {
+                new_end = cand;
+            } else if cand < self.start {
+                new_start = cand;
+            }
+            return (new_start, new_end);
+        };
+
+        let update_jokers = |num| {
+            let mut new_jokers = self.jokers.clone();
+            new_jokers.insert(num);
+            new_jokers
+        };
+
+        match tile {
+            JokersWild => {
+                if self.jokers.len() >= MAX_JOKERS_IN_RUN {
+                    return None;
+                } else if is_new_location_valid(requested_spot) {
+                    let req = requested_spot.unwrap();
+                    let (new_start, new_end) = new_delimiters(req);
+                    let new_jokers = update_jokers(req);
+                    return Some(Run{start: new_start, end: new_end, jokers: new_jokers,color: self.color });
+                } else if requested_spot.is_none() {
+                    let new_spot = find_highest_target();
+                    if new_spot.is_none() {
+                        return None
+                    }
+                    let (new_start, new_end) = new_delimiters(new_spot.unwrap());
+                    let new_jokers = update_jokers(new_spot.unwrap());
+                    return Some(Run { start: new_start, end: new_end, jokers: new_jokers, color: self.color });
+                }
+                return None;
+            }
+            RegularTile(cn) => {
+                if cn.color != self.color || requested_spot.is_some() {
+                    return None
+                } else if is_new_location_valid(Some(cn.num)) {
+                    let (new_start, new_end) = new_delimiters(cn.num);
+                    return Some(Run{start: new_start, end: new_end, color: self.color, jokers: self.jokers.clone()})
+                }
+            }
+        }
+        None
+    }
 }
 
 #[cfg(test)]
@@ -420,5 +497,30 @@ mod other_tests_of_runs {
                 panic!("Test Broken!")
             }
         }
+    }
+
+    #[test]
+    fn add_tile_happy_path() {
+        let (origin, run) = good_run();
+        let mut last_cn = ColoredNumber::get_rand();
+        if let RegularTile(cn) = origin.last().unwrap() {
+            if last_cn.num == Thirteen {
+                // UGH randomness while testing -> try different test later
+                return;
+            }
+            last_cn = cn.clone();
+        }
+        let new_tile = RegularTile(ColoredNumber::new(last_cn.color, last_cn.num.next()));
+        let result = run.add_tile(&new_tile, None);
+        assert!(result.is_some());
+        let mut origin_plus = origin.clone();
+        origin_plus.push(new_tile);
+        assert_eq!(result, Run::parse(origin_plus).ok());
+
+        let run_plus_joke = run.add_tile(&JokersWild, None);
+        assert!(run_plus_joke.is_some());
+        let mut origin_joke = origin.clone();
+        origin_joke.push(JokersWild);
+        assert_eq!(run_plus_joke, Run::parse(origin_joke).ok())
     }
 }
