@@ -5,6 +5,10 @@ use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
+use crate::domain::initial_meld::InitialMeld;
+use crate::domain::sets::group::Group;
+use crate::domain::sets::run::Run;
+use crate::domain::sets::Set;
 
 const INITIAL_TILES: u8 = 14;
 
@@ -12,8 +16,8 @@ const INITIAL_TILES: u8 = 14;
 /// This information is known only to the owning player
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayerRack {
-    rack: Vec<Tile>,
-    played_initial_meld: bool,
+    pub rack: Vec<Tile>,
+    pub played_initial_meld: bool,
 }
 
 impl Display for PlayerRack {
@@ -35,6 +39,13 @@ impl Ord for PlayerRack {
 }
 
 impl PlayerRack {
+    pub fn can_play_initial_meld(&self) -> Option<InitialMeld> {
+        if let Some(sets) = self.sets_on_rack() {
+            return InitialMeld::parse(sets);
+        }
+        None
+    }
+
     pub fn is_empty(&self) -> bool {
         return self.rack.len() == 0;
     }
@@ -59,6 +70,31 @@ impl PlayerRack {
     pub fn total_value(&self) -> ScoreValue {
         todo!()
     }
+
+    fn sets_on_rack(&self) -> Option<Vec<Set>> {
+        let mut sets: Vec<Set> = vec![];
+        for r in self.runs_on_rack() {
+            sets.push(Set::Run(r));
+        }
+        for g in self.groups_on_rack() {
+            sets.push(Set::Group(g))
+        }
+        return if sets.len() == 0 {
+            None
+        } else {
+            Some(sets)
+        }
+    }
+
+    fn groups_on_rack(&self) -> Vec<Group> {
+        todo!()
+    }
+
+    fn runs_on_rack(&self) -> Vec<Run> {
+        todo!()
+    }
+
+
 }
 
 #[cfg(test)]

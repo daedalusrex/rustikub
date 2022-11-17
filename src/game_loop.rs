@@ -7,6 +7,8 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
 
+// TODO break some of these into separate files.
+
 /// Represents the publicly known state of a single game of rummikub
 #[derive(Debug, Clone)]
 pub struct PublicGameState {
@@ -78,6 +80,15 @@ impl GameState {
 /// Cannot Modify Other Player Racks, but can modify itself
 pub fn take_turn(rack: &PlayerRack, face_up: &PublicGameState) -> (PlayerRack, PublicGameState) {
     //simple stuff first
+
+    if !rack.played_initial_meld {
+        if let Some(meld) = rack.can_play_initial_meld() {
+            // remove meld from rack
+        }
+    } else {
+        // can attempt to add new tiles to the table
+    }
+
     todo!()
 }
 
