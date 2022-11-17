@@ -66,10 +66,11 @@ impl Group {
     }
 
     pub fn count(&self) -> u8 {
-        self.colors.len() as u8
+        self.colors.len() as u8 + self.jokers
     }
 
     pub fn contains(&self, c: Color) -> bool {
+        // TODO Jokers?
         self.colors.contains(&c)
     }
 
@@ -94,6 +95,29 @@ impl Group {
     pub fn total_value(&self) -> ScoreValue {
         let one_num = self.num.get_value();
         one_num * (self.jokers + self.colors.len() as u8)
+    }
+
+    pub fn add_tile(&self, tile: Tile) -> Option<Group> {
+        if self.colors.len() + self.jokers as usize == MAX_GROUP_SIZE {
+            return None;
+        }
+        match tile {
+            Tile::JokersWild => {
+                if self.jokers == MAX_JOKERS_IN_GROUP {
+                    return None;
+                }
+                let jokers = self.jokers + 1;
+                return Some(Group{num: self.num, colors: self.colors.clone(), jokers});
+            }
+            Tile::RegularTile(cn) => {
+                if self.contains(cn.color) || self.num != cn.num {
+                    return None;
+                }
+                let mut colors = self.colors.clone();
+                colors.insert(cn.color);
+                return Some(Group{num: self.num, colors, jokers: self.jokers})
+            }
+        }
     }
 }
 
@@ -243,7 +267,37 @@ pub mod group_tests {
             RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
             JokersWild,
         ])
-        .unwrap();
+            .unwrap();
         assert_eq!(ScoreValue { total: 15 }, known_group.total_value())
+    }
+
+    #[test]
+    fn add_tile_happy() {
+        let known_group = Group::parse(vec![
+            RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
+            RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
+            RegularTile(ColoredNumber::new(Color::Orange, Number::Five)),
+        ]).unwrap();
+        let result = known_group.add_tile(RegularTile(ColoredNumber::new(Color::Black, Number::Five)));
+        assert!(result.is_some());
+
+        let parsed = Group::parse(vec![
+            RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
+            RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
+            RegularTile(ColoredNumber::new(Color::Orange, Number::Five)),
+            RegularTile(ColoredNumber::new(Color::Black, Number::Five)),
+        ]).unwrap();
+       assert_eq!(parsed, result.unwrap());
+
+        let joker_g = Group::parse(vec![
+            RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
+            RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
+            JokersWild,
+        ]).unwrap();
+        let joke = joker_g.add_tile(RegularTile(ColoredNumber::new(Color::Orange, Number::Five)));
+        assert!(joke.is_some());
+        let joke_jok = joker_g.add_tile(JokersWild);
+        assert!(joke_jok.is_some());
+
     }
 }
