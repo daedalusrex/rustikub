@@ -1,5 +1,5 @@
-use super::tiles::Tile::{JokersWild, RegularTile};
-use super::tiles::*;
+use crate::domain::tiles::Tile::{JokersWild, RegularTile};
+use crate::domain::tiles::*;
 use rand::prelude::SliceRandom;
 use std::fmt::Formatter;
 use strum::IntoEnumIterator;

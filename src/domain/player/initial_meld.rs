@@ -1,4 +1,4 @@
-use super::sets::Set;
+use crate::domain::sets::Set;
 use crate::domain::ScoreValue;
 
 const MINIMUM_MELD_SCORE: ScoreValue = ScoreValue { total: 30 };

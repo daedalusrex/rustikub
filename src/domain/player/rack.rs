@@ -1,11 +1,12 @@
-use crate::domain::boneyard::Boneyard;
+use crate::domain::table::boneyard::Boneyard;
 use crate::domain::tiles::Tile;
 use crate::domain::ScoreValue;
 use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
-use crate::domain::initial_meld::InitialMeld;
+
+use crate::domain::player::initial_meld::InitialMeld;
 use crate::domain::sets::group::Group;
 use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
@@ -15,30 +16,30 @@ const INITIAL_TILES: u8 = 14;
 ///Player racks can hold any number of tiles (up to all tiles not had by other players)
 /// This information is known only to the owning player
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PlayerRack {
+pub struct Rack {
     pub rack: Vec<Tile>,
     pub played_initial_meld: bool,
 }
 
-impl Display for PlayerRack {
+impl Display for Rack {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Rack has {} tiles", self.rack.len()) // TODO, consider to elaborate
     }
 }
 
-impl PartialOrd for PlayerRack {
+impl PartialOrd for Rack {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for PlayerRack {
+impl Ord for Rack {
     fn cmp(&self, other: &Self) -> Ordering {
         self.total_value().cmp(&other.total_value())
     }
 }
 
-impl PlayerRack {
+impl Rack {
     pub fn can_play_initial_meld(&self) -> Option<InitialMeld> {
         if let Some(sets) = self.sets_on_rack() {
             return InitialMeld::parse(sets);
@@ -60,7 +61,7 @@ impl PlayerRack {
             bones = new_bones;
             rack.push(tile);
         }
-        let player_rack = PlayerRack {
+        let player_rack = Rack {
             rack,
             played_initial_meld: false,
         };
@@ -79,11 +80,7 @@ impl PlayerRack {
         for g in self.groups_on_rack() {
             sets.push(Set::Group(g))
         }
-        return if sets.len() == 0 {
-            None
-        } else {
-            Some(sets)
-        }
+        return if sets.len() == 0 { None } else { Some(sets) };
     }
 
     fn groups_on_rack(&self) -> Vec<Group> {
@@ -93,20 +90,18 @@ impl PlayerRack {
     fn runs_on_rack(&self) -> Vec<Run> {
         todo!()
     }
-
-
 }
 
 #[cfg(test)]
 mod basic_tests {
-    use crate::domain::boneyard::Boneyard;
-    use crate::domain::player_rack::PlayerRack;
+    use crate::domain::player::rack::Rack;
+    use crate::domain::table::boneyard::Boneyard;
 
     #[test]
     pub fn init_rack_and_give_back_boneyard() {
         let bones = Boneyard::new_game();
         println!("initial boneyard: {}", bones);
-        let result = PlayerRack::draw_initial_tiles(&bones);
+        let result = Rack::draw_initial_tiles(&bones);
         let (new_rack, new_bones) = result;
         println!("{}", new_rack);
         println!("{}", new_bones);

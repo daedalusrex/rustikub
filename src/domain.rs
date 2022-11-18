@@ -1,10 +1,7 @@
-use crate::game_loop::GameResult;
 use std::fmt;
 use std::fmt::Formatter;
 
-pub mod boneyard;
-pub mod initial_meld;
-pub mod player_rack;
+pub mod player;
 pub mod sets;
 pub mod table;
 pub mod tiles;

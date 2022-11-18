@@ -2,10 +2,13 @@
 
 extern crate core;
 
+use game_loop::meta::GameConfig;
+
 mod domain;
 mod game_loop;
 
 fn main() {
+    use game_loop::state::GameState;
     use game_loop::*;
     println!("Hello There! Welcome to Rustikub!");
     // TODO Hardcoded for now, later can be controlled by user

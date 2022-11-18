@@ -156,7 +156,6 @@ impl Run {
     /// with the tile attached. Requested Spot is only considered for Jokers, which could be placed
     /// on either end of the run. If none is provided the highest value location will be chosen
     pub fn add_tile(&self, tile: &Tile, requested_spot: Option<Number>) -> Option<Self> {
-
         // Clojure logic for where to put Joker, only if requested spot is not provided
         let find_highest_target = || -> Option<Number> {
             return if self.end == Number::Thirteen {
@@ -205,24 +204,39 @@ impl Run {
                     let req = requested_spot.unwrap();
                     let (new_start, new_end) = new_delimiters(req);
                     let new_jokers = update_jokers(req);
-                    return Some(Run{start: new_start, end: new_end, jokers: new_jokers,color: self.color });
+                    return Some(Run {
+                        start: new_start,
+                        end: new_end,
+                        jokers: new_jokers,
+                        color: self.color,
+                    });
                 } else if requested_spot.is_none() {
                     let new_spot = find_highest_target();
                     if new_spot.is_none() {
-                        return None
+                        return None;
                     }
                     let (new_start, new_end) = new_delimiters(new_spot.unwrap());
                     let new_jokers = update_jokers(new_spot.unwrap());
-                    return Some(Run { start: new_start, end: new_end, jokers: new_jokers, color: self.color });
+                    return Some(Run {
+                        start: new_start,
+                        end: new_end,
+                        jokers: new_jokers,
+                        color: self.color,
+                    });
                 }
                 return None;
             }
             RegularTile(cn) => {
                 if cn.color != self.color || requested_spot.is_some() {
-                    return None
+                    return None;
                 } else if is_new_location_valid(Some(cn.num)) {
                     let (new_start, new_end) = new_delimiters(cn.num);
-                    return Some(Run{start: new_start, end: new_end, color: self.color, jokers: self.jokers.clone()})
+                    return Some(Run {
+                        start: new_start,
+                        end: new_end,
+                        color: self.color,
+                        jokers: self.jokers.clone(),
+                    });
                 }
             }
         }
