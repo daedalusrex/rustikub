@@ -1,68 +1,20 @@
 use std::fmt;
 use std::fmt::Formatter;
+use crate::domain::tiles::Tile;
 
 pub mod player;
 pub mod sets;
 pub mod table;
 pub mod tiles;
+pub mod score_value;
 
 // FYI, doing this instead of mod.rs is the 'preferred' convention
 
 #[derive(Debug)]
 pub struct RummikubError;
 
-#[derive(Debug, PartialEq, Ord, Eq, PartialOrd, Copy, Clone)]
-pub struct ScoreValue {
-    total: u16,
-}
-
-impl ScoreValue {
-    pub fn test() {
-        let left = ScoreValue { total: 9 };
-    }
-}
-
-impl fmt::Display for ScoreValue {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.total)
-    }
-}
-
-impl std::ops::Add<ScoreValue> for ScoreValue {
-    type Output = ScoreValue;
-    fn add(self, rhs: ScoreValue) -> Self::Output {
-        let new_val = self.total + rhs.total;
-        ScoreValue { total: new_val }
-    }
-}
-
-impl std::ops::Mul<u8> for ScoreValue {
-    type Output = ScoreValue;
-    fn mul(self, rhs: u8) -> Self::Output {
-        let total = self.total * rhs as u16;
-        ScoreValue { total }
-    }
-}
-
-impl std::ops::AddAssign for ScoreValue {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = Self {
-            total: self.total + rhs.total,
-        };
-    }
-}
-
-#[cfg(test)]
-pub mod quicktests {
-    use crate::domain::ScoreValue;
-
-    #[test]
-    fn quick_test_of_score_syntactic_sugar() {
-        let left = ScoreValue { total: 9 };
-        let right = ScoreValue { total: 20 };
-        let mut sum = left + right;
-        println!("sum: {:?}", &sum);
-        sum += left;
-        println!("plus eq {:?}", sum);
-    }
+/// Decomposes an abstract group of multiple (or a single) tiles,
+/// into the component tiles that constitute the thing that is being decomposed
+pub trait Decompose {
+    fn decompose(&self) -> Vec<Tile>;
 }

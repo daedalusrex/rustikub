@@ -1,11 +1,12 @@
 use crate::domain::tiles::Number::{
     Eight, Eleven, Five, Four, Nine, One, Seven, Six, Ten, Thirteen, Three, Twelve, Two,
 };
-use crate::domain::{RummikubError, ScoreValue};
+use crate::domain::{Decompose, RummikubError};
 use rand::seq::IteratorRandom;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter, EnumString};
 use Tile::{JokersWild, RegularTile};
+use crate::domain::score_value::ScoreValue;
 
 #[derive(EnumIter, EnumCount, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Color {
@@ -124,7 +125,7 @@ impl Number {
             Twelve => 12,
             Thirteen => 13,
         };
-        ScoreValue { total }
+        ScoreValue::of(total as u8)
     }
 }
 
@@ -161,6 +162,13 @@ impl ColoredNumber {
 pub enum Tile {
     JokersWild,
     RegularTile(ColoredNumber),
+}
+
+impl Decompose for Tile {
+    /// can a tile decompose into itself? -> YES lol
+    fn decompose(&self) -> Vec<Tile> {
+        return vec![self.clone()]
+    }
 }
 
 impl Tile {

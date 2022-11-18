@@ -1,17 +1,20 @@
 use crate::domain::table::boneyard::Boneyard;
 use crate::domain::tiles::Tile;
-use crate::domain::ScoreValue;
+use crate::domain::{Decompose, RummikubError};
 use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 
 use crate::domain::player::initial_meld::InitialMeld;
+use crate::domain::score_value::ScoreValue;
 use crate::domain::sets::group::Group;
 use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
 
 const INITIAL_TILES: u8 = 14;
+
+pub struct GenericT<T>(T);
 
 ///Player racks can hold any number of tiles (up to all tiles not had by other players)
 /// This information is known only to the owning player
@@ -72,7 +75,7 @@ impl Rack {
         todo!()
     }
 
-    fn sets_on_rack(&self) -> Option<Vec<Set>> {
+    pub fn sets_on_rack(&self) -> Option<Vec<Set>> {
         let mut sets: Vec<Set> = vec![];
         for r in self.runs_on_rack() {
             sets.push(Set::Run(r));
@@ -90,12 +93,43 @@ impl Rack {
     fn runs_on_rack(&self) -> Vec<Run> {
         todo!()
     }
+
+    /// Removes the given vector of tiles from the rack and returns a new version
+    /// This could be a Tile, or a Group, or a Run
+    /// An Error Will be returned if any of the requested tiles are not present in the Rack
+    /// Relies on Traits!!
+    pub fn remove(&self, items: &impl Decompose) -> Result<Self, RummikubError> {
+        let foo = items.decompose();
+        println!("{:?}", foo);
+        todo!()
+    }
+
+    pub fn testgenericsyntax<T>(&self, foo: GenericT<T>) -> Self {
+        todo!()
+    }
 }
+
 
 #[cfg(test)]
 mod basic_tests {
     use crate::domain::player::rack::Rack;
+    use crate::domain::RummikubError;
+    use crate::domain::sets::run::Run;
     use crate::domain::table::boneyard::Boneyard;
+    use crate::domain::tiles::{Color, ColoredNumber as CN, Number, Tile};
+    use crate::domain::tiles::Tile::{JokersWild, RegularTile};
+
+    fn object_mother_some_rack() -> Rack {
+        Rack {
+            rack: vec![JokersWild,
+                       Tile::any_regular(), Tile::any_regular(), Tile::any_regular(),
+                       RegularTile(CN::new(Color::Black, Number::Five)),
+                       RegularTile(CN::new(Color::Black, Number::Six)),
+                       RegularTile(CN::new(Color::Black, Number::Seven)),
+            ],
+            played_initial_meld: false,
+        }
+    }
 
     #[test]
     pub fn init_rack_and_give_back_boneyard() {
@@ -105,5 +139,16 @@ mod basic_tests {
         let (new_rack, new_bones) = result;
         println!("{}", new_rack);
         println!("{}", new_bones);
+    }
+
+    #[test]
+    pub fn removal_of_different_items() {
+        let simple_run_vec = vec![RegularTile(CN::new(Color::Black, Number::Five)),
+                              RegularTile(CN::new(Color::Black, Number::Six)),
+                              RegularTile(CN::new(Color::Black, Number::Seven))];
+        let simple_run = Run::parse(simple_run_vec).unwrap();
+        let some_rack = object_mother_some_rack();
+        let result: Result<Rack, RummikubError> = some_rack.remove(&simple_run);
+        assert!(result.is_ok());
     }
 }

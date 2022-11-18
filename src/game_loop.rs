@@ -7,7 +7,7 @@ use crate::domain::player::info::PlayerInfo;
 use crate::domain::player::rack::Rack;
 use crate::domain::player::Player;
 use crate::domain::table::face_up::FaceUpTiles;
-use crate::domain::ScoreValue;
+use crate::domain::score_value::ScoreValue;
 use meta::GameOutcome;
 use state::{GameState, PublicGameState};
 use std::cmp::Ordering;

@@ -1,6 +1,7 @@
 use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
-use crate::domain::ScoreValue;
+use crate::domain::score_value::ScoreValue;
 use std::collections::{HashMap, HashSet};
+use crate::domain::Decompose;
 
 const MAX_GROUP_SIZE: usize = 4;
 const MIN_GROUP_SIZE: usize = 3;
@@ -74,20 +75,6 @@ impl Group {
         self.colors.contains(&c)
     }
 
-    pub fn decompose(&self) -> Vec<Tile> {
-        let mut composite_tiles: Vec<Tile> = vec![];
-        for joker in 0..self.jokers {
-            composite_tiles.push(Tile::JokersWild);
-        }
-        for color in &self.colors {
-            composite_tiles.push(Tile::RegularTile(ColoredNumber {
-                color: *color,
-                num: self.num,
-            }))
-        }
-        composite_tiles
-    }
-
     pub fn get_group_num(&self) -> Number {
         self.num
     }
@@ -126,6 +113,22 @@ impl Group {
                 });
             }
         }
+    }
+}
+
+impl Decompose for Group {
+    fn decompose(&self) -> Vec<Tile> {
+        let mut composite_tiles: Vec<Tile> = vec![];
+        for joker in 0..self.jokers {
+            composite_tiles.push(Tile::JokersWild);
+        }
+        for color in &self.colors {
+            composite_tiles.push(Tile::RegularTile(ColoredNumber {
+                color: *color,
+                num: self.num,
+            }))
+        }
+        composite_tiles
     }
 }
 
@@ -276,7 +279,7 @@ pub mod group_tests {
             JokersWild,
         ])
         .unwrap();
-        assert_eq!(ScoreValue { total: 15 }, known_group.total_value())
+        assert_eq!(ScoreValue::of(15), known_group.total_value())
     }
 
     #[test]

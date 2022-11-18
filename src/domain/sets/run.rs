@@ -2,9 +2,10 @@ use super::ParseError;
 use super::ParseError::*;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
-use crate::domain::ScoreValue;
+use crate::domain::score_value::ScoreValue;
 use std::collections::{HashSet, LinkedList};
 use std::vec;
+use crate::domain::Decompose;
 
 const MAX_RUN_SIZE: usize = 13;
 const MIN_RUN_SIZE: usize = 3;
@@ -119,21 +120,6 @@ impl Run {
         })
     }
 
-    pub fn decompose(&self) -> Vec<Tile> {
-        let mut current = self.start;
-        let mut tiles: Vec<Tile> = vec![];
-        while current <= self.end {
-            if self.jokers.contains(&current) {
-                tiles.push(JokersWild);
-            } else {
-                let cn = ColoredNumber::new(self.color, current);
-                tiles.push(RegularTile(cn))
-            }
-            current = current.next();
-        }
-        tiles
-    }
-
     pub fn contains(&self, n: Number) -> bool {
         self.start <= n && self.end >= n
     }
@@ -143,7 +129,7 @@ impl Run {
     }
 
     pub fn total_value(&self) -> ScoreValue {
-        let mut score_sum = ScoreValue { total: 0 };
+        let mut score_sum = ScoreValue::of(0);
         let mut current = self.start;
         while current <= self.end {
             score_sum = score_sum + current.get_value();
@@ -241,6 +227,23 @@ impl Run {
             }
         }
         None
+    }
+}
+
+impl Decompose for Run {
+    fn decompose(&self) -> Vec<Tile> {
+        let mut current = self.start;
+        let mut tiles: Vec<Tile> = vec![];
+        while current <= self.end {
+            if self.jokers.contains(&current) {
+                tiles.push(JokersWild);
+            } else {
+                let cn = ColoredNumber::new(self.color, current);
+                tiles.push(RegularTile(cn))
+            }
+            current = current.next();
+        }
+        tiles
     }
 }
 
@@ -457,7 +460,7 @@ mod run_parsing {
         let second = ColoredNumber::new(first.color, Six);
         let third = ColoredNumber::new(first.color, Seven);
 
-        let actual_sum = ScoreValue { total: 5 + 6 + 7 };
+        let actual_sum = ScoreValue::of(5 + 6 + 7);
         let known_run = Run::parse(vec![
             RegularTile(first),
             RegularTile(second),
@@ -466,9 +469,7 @@ mod run_parsing {
         .unwrap();
         assert_eq!(known_run.total_value(), known_run.total_value());
 
-        let actual_sum_with_joker = ScoreValue {
-            total: 5 + 6 + 7 + 8,
-        };
+        let actual_sum_with_joker = ScoreValue::of(5 + 6 + 7 + 8);
         let with_joker = Run::parse(vec![
             RegularTile(first),
             RegularTile(second),

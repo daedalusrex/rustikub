@@ -1,7 +1,7 @@
 use crate::domain::sets::Set;
-use crate::domain::ScoreValue;
+use crate::domain::score_value::ScoreValue;
 
-const MINIMUM_MELD_SCORE: ScoreValue = ScoreValue { total: 30 };
+const MINIMUM_MELD_SCORE: ScoreValue = ScoreValue::of(30);
 
 /// In order to make an initial meld, each player must place tiles in one or more sets that total at least 30 points.
 /// These points must come from the tiles on each player’s rack only.
@@ -14,7 +14,7 @@ pub struct InitialMeld {
 
 impl InitialMeld {
     pub fn parse(candidates: Vec<Set>) -> Option<InitialMeld> {
-        let mut score_sum = ScoreValue { total: 0 };
+        let mut score_sum = ScoreValue::of(0);
         for set in &candidates {
             match set {
                 Set::Group(g) => score_sum += g.total_value(),

@@ -1,9 +1,10 @@
 pub mod group;
 pub mod run;
 
-use crate::domain::ScoreValue;
+use crate::domain::score_value::ScoreValue;
 use group::Group;
 use run::Run;
+use crate::domain::tiles::Tile;
 
 #[derive(Debug, Clone)]
 pub enum Set {
