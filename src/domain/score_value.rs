@@ -1,5 +1,6 @@
 use std::fmt;
 use std::fmt::Formatter;
+use crate::domain::tiles::Tile;
 
 #[derive(Debug, PartialEq, Ord, Eq, PartialOrd, Copy, Clone)]
 pub struct ScoreValue {
@@ -10,6 +11,11 @@ impl ScoreValue {
     /// Creates an arbitrary score value from the provided integer
     pub const fn of(val: u8) -> ScoreValue {
         ScoreValue{total: val as u16}
+    }
+
+    pub fn add_em_up(tiles: Vec<Tile>) {
+        todo!()
+        // Jokers cost -> 30 pt penalty
     }
 
 }

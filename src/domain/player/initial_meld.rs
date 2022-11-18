@@ -9,7 +9,7 @@ const MINIMUM_MELD_SCORE: ScoreValue = ScoreValue::of(30);
 /// A joker used in the initial meld scores the value of the tile it represents.
 /// After a player has made their initial meld, they can build on other sets on the table with tiles from their rack
 pub struct InitialMeld {
-    sets: Vec<Set>,
+    pub sets: Vec<Set>,
 }
 
 impl InitialMeld {

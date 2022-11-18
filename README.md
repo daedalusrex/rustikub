@@ -94,11 +94,26 @@ type PlayerRack = {
 │   └── Rummikub_Official_Rules.pdf
 ├── src
 │   ├── domain
-│   │   ├── boneyard.rs
+│   │   ├── player
+│   │   │   ├── info.rs
+│   │   │   ├── initial_meld.rs
+│   │   │   └── rack.rs
+│   │   ├── player.rs
+│   │   ├── score_value.rs
+│   │   ├── sets
+│   │   │   ├── group.rs
+│   │   │   └── run.rs
 │   │   ├── sets.rs
+│   │   ├── table
+│   │   │   ├── boneyard.rs
+│   │   │   └── face_up.rs
 │   │   ├── table.rs
 │   │   └── tiles.rs
 │   ├── domain.rs
+│   ├── game_loop
+│   │   ├── meta.rs
+│   │   └── state.rs
+│   ├── game_loop.rs
 │   └── main.rs
 └── tests
     └── integration_tests_only.rs

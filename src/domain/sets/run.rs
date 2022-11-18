@@ -26,6 +26,7 @@ pub struct Run {
 impl Run {
     // Using the Result<T, E> type instead of Option here. It's better suited for this? than Option
     //  https://doc.rust-lang.org/rust-by-example/error/result.html
+    // TODO this should be &Vec<Tile>, a reference instead of a borrow
     pub fn parse(candidates: Vec<Tile>) -> Result<Run, ParseError> {
         if candidates.len() < MIN_RUN_SIZE {
             return Err(TooFewTiles);

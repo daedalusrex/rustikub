@@ -23,6 +23,7 @@ pub fn take_turn(rack: &Rack, face_up: &PublicGameState) -> (Rack, PublicGameSta
     if !rack.played_initial_meld {
         if let Some(meld) = rack.can_play_initial_meld() {
             // remove meld from rack
+            let new_rack = rack.remove_meld(meld).unwrap();
         }
     } else {
         // can attempt to add new tiles to the table

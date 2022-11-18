@@ -4,6 +4,7 @@ pub mod run;
 use crate::domain::score_value::ScoreValue;
 use group::Group;
 use run::Run;
+use crate::domain::Decompose;
 use crate::domain::tiles::Tile;
 
 #[derive(Debug, Clone)]
@@ -18,6 +19,15 @@ impl Set {
         match self {
             Set::Group(g) => g.total_value(),
             Set::Run(r) => r.total_value(),
+        }
+    }
+}
+
+impl Decompose for Set {
+    fn decompose(&self) -> Vec<Tile> {
+        match self {
+            Set::Group(g) => g.decompose(),
+            Set::Run(r) => r.decompose(),
         }
     }
 }
