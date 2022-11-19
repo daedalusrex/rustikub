@@ -9,14 +9,14 @@ use std::collections::VecDeque;
 /// Represents the publicly known state of a single game of rummikub
 #[derive(Debug, Clone)]
 pub struct PublicGameState {
-    boneyard: Boneyard,
-    table: FaceUpTiles,
+    pub boneyard: Boneyard,
+    pub face_up: FaceUpTiles,
 }
 
 /// The entire current state of a single game of Rummikub
 #[derive(Debug, Clone)]
 pub struct GameState {
-    pub face_up: PublicGameState,
+    pub table: PublicGameState,
     pub players: VecDeque<Player>,
 }
 
@@ -25,7 +25,7 @@ impl GameState {
     pub fn init_game(conf: GameConfig) -> GameState {
         let mut board = PublicGameState {
             boneyard: Boneyard::new_game(),
-            table: FaceUpTiles::new(),
+            face_up: FaceUpTiles::new(),
         };
 
         let mut players = VecDeque::new();
@@ -38,7 +38,7 @@ impl GameState {
             players.push_back(Player { rack, info });
         }
         GameState {
-            face_up: board,
+            table: board,
             players,
         }
     }

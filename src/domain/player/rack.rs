@@ -13,6 +13,7 @@ use crate::domain::score_value::ScoreValue;
 use crate::domain::sets::group::Group;
 use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
+use crate::domain::table::face_up::FaceUpTiles;
 use crate::domain::tiles::Tile::RegularTile;
 
 const INITIAL_TILES: u8 = 14;
@@ -53,11 +54,12 @@ impl Rack {
         None
     }
 
-    pub fn remove_meld(&self, meld: InitialMeld) -> Result<Rack, RummikubError> {
+    pub fn remove_meld(&self, meld: &InitialMeld) -> Result<Rack, RummikubError> {
         let mut rack = self.clone();
         for set in &meld.sets {
             rack = rack.remove(set)?;
         }
+        rack.played_initial_meld = true;
         Ok(rack)
     }
 
@@ -180,6 +182,18 @@ impl Rack {
             rack: remaining,
             played_initial_meld: self.played_initial_meld,
         })
+    }
+
+    /// If possible, places one (or more) tiles from from the rack onto the face up tiles
+    /// following the constraints for groups and sets. Returns the new Rack and New Tiles if successful
+    /// otherwise returns None, indicating no change was made
+    pub fn rearrange_and_place(&self, face_up: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
+        // TODO Implement Rearrange and Place from Rack
+        None
+    }
+
+    pub fn add_tile_to_rack(&mut self, tile: &Tile) {
+        todo!()
     }
 }
 

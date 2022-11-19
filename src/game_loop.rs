@@ -17,19 +17,40 @@ use std::fmt::Formatter;
 
 /// Modifies Potentially the Entire Table, and returns a new game state
 /// Cannot Modify Other Player Racks, but can modify itself
-pub fn take_turn(rack: &Rack, face_up: &PublicGameState) -> (Rack, PublicGameState) {
-    //simple stuff first
+pub fn take_turn(rack: &Rack, table: &PublicGameState) -> (Rack, PublicGameState) {
+    let mut new_rack = rack.clone();
+    let mut new_table = table.clone();
+    let mut has_placed_this_turn = false;
 
     if !rack.played_initial_meld {
         if let Some(meld) = rack.can_play_initial_meld() {
-            // remove meld from rack
-            let new_rack = rack.remove_meld(meld).unwrap();
+            println!("Playing Initial Meld!");
+            // remove meld from rack, must succeed
+            new_rack = rack.remove_meld(&meld).unwrap();
+            new_table.face_up = table.face_up.place_new_sets(&meld.sets);
+            has_placed_this_turn = true;
         }
-    } else {
-        // can attempt to add new tiles to the table
     }
 
-    todo!()
+    if rack.played_initial_meld || new_rack.played_initial_meld {
+        // can attempt to add new tiles to the table
+        if let Some((new_rack, new_face_up)) = rack.rearrange_and_place(&table.face_up) {
+            println!("Rearranged Face Up Tiles and Placing some from Rack!");
+            // TODO verify new_rack properly shadowed as expected here
+            new_table.face_up = new_face_up;
+            has_placed_this_turn = true;
+        }
+    }
+
+    if !has_placed_this_turn {
+        // Have Not Placed Any Tiles This Turn, therefore MUST draw
+        println!("Must Draw from Boneyard!");
+        let (drawn, new_bones) = table.boneyard.draw_one();
+        new_rack.add_tile_to_rack(&drawn);
+        new_table.boneyard = new_bones;
+    }
+
+    (new_rack, new_table)
 }
 
 pub fn main_game_loop(initial_state: GameState) -> GameOutcome {
@@ -37,18 +58,25 @@ pub fn main_game_loop(initial_state: GameState) -> GameOutcome {
     let mut current_player = current_state.players.pop_front().unwrap();
 
     while !current_player.rack.is_empty() {
-        let (rack, new_face_up) = take_turn(&current_player.rack, &current_state.face_up);
+        println!("Player {}'s Turn!", current_player.info.name);
+        let (rack, table) = take_turn(&current_player.rack, &current_state.table);
         let updated_player = Player {
             info: current_player.info.clone(),
             rack,
         };
+        if updated_player.rack.is_empty() {
+            current_player = updated_player;
+            break;
+        }
         current_state.players.push_back(updated_player);
-        current_state.face_up = new_face_up;
+        current_state.table = table;
         current_player = current_state.players.pop_front().unwrap();
     }
 
     //End Game, Compute Result
     let winner = current_player;
+    println!("Game Over! Player {} Wins!", winner.info.name);
+
     // TODO not sure that ordering worked, test this
     let loser = current_state.players.iter().max().unwrap().clone();
     GameOutcome { winner, loser }

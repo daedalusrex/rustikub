@@ -27,4 +27,14 @@ impl FaceUpTiles {
         //TODO
         FaceUpTiles { sets: vec![] }
     }
+
+    pub fn place_new_sets(&self, sets: &Vec<Set>) -> FaceUpTiles {
+        // planning to call below
+        todo!()
+    }
+
+    /// Privately modifies self to add a new set
+    fn place_set(&mut self, set: Set) {
+        todo!()
+    }
 }
