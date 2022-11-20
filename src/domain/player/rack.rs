@@ -18,7 +18,6 @@ use crate::domain::tiles::Tile::RegularTile;
 
 const INITIAL_TILES: u8 = 14;
 
-pub struct GenericT<T>(T);
 
 ///Player racks can hold any number of tiles (up to all tiles not had by other players)
 /// This information is known only to the owning player
@@ -123,6 +122,7 @@ impl Rack {
     /// Returns all Runs that are possible to create simultaneously given tiles currently on the rack.
     /// Multiple concurrent possible runs are not returned
     fn runs_on_rack(&self) -> Vec<Run> {
+        // TODO test and fix this
         let mut runs_present: Vec<Run> = vec![];
         let num_jokers = self.rack.iter().filter(|tile| tile.is_joker()).count();
         let reg_tiles: Vec<Tile> = self
@@ -193,6 +193,7 @@ impl Rack {
     }
 
     pub fn add_tile_to_rack(&mut self, tile: &Tile) {
+        // TODO should be easy, probably worth a test or two. 
         todo!()
     }
 }

@@ -11,7 +11,6 @@ pub struct FaceUpTiles {
     sets: Vec<Set>,
 }
 
-// TODO consider renaming table to face up
 impl FaceUpTiles {
     /// Rules have several types of manipulations
     /// Add one or more tiles from rack to make new set
@@ -21,7 +20,9 @@ impl FaceUpTiles {
     /// Combined split
     /// Multiple split:
     /// Also, special joker rules need to be considered
-    pub fn manipulate() {}
+    pub fn manipulate() {
+        todo!()
+    }
 
     pub fn new() -> FaceUpTiles {
         //TODO

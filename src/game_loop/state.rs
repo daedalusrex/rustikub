@@ -32,9 +32,7 @@ impl GameState {
         for i in 0..conf.num_players {
             let (rack, new_bones) = Rack::draw_initial_tiles(&board.boneyard);
             board.boneyard = new_bones;
-            let info = PlayerInfo {
-                name: format!("Player {}", i),
-            };
+            let info = PlayerInfo::of( &i.to_string());
             players.push_back(Player { rack, info });
         }
         GameState {

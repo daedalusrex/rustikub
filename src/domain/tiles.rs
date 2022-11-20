@@ -274,7 +274,7 @@ mod tile_tests {
 
     #[test]
     fn random_tiles() {
-        // TODO sometimes seems to hang?
+        // TODO sometimes seems to hang? => nope, just the test functionality haning, (must be elsewhere?)
         let rt = Tile::any_regular();
         if let Tile::RegularTile(foo) = rt {
             assert!(true)

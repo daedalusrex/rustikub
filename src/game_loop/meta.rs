@@ -13,8 +13,8 @@ impl fmt::Display for GameOutcome {
         write!(
             f,
             "Winner is: {}! Highest Score at End Game(THE LOSER) was {} with {} pts",
-            self.winner.info.name,
-            self.loser.info.name,
+            self.winner.info,
+            self.loser.info,
             self.loser.rack.total_value()
         )
     }
