@@ -108,7 +108,7 @@ impl Number {
         }
     }
 
-    pub fn get_value(&self) -> ScoreValue {
+    pub fn as_value(&self) -> ScoreValue {
         use Number::*;
         let total: u16 = match self {
             One => 1,
@@ -169,6 +169,18 @@ impl Decompose for Tile {
     fn decompose(&self) -> Vec<Tile> {
         return vec![self.clone()]
     }
+}
+
+/// Given tiles returns their corresponding regular CN's. Drops Jokers
+pub fn only_colored_nums(tiles :&Vec<Tile>) -> Vec<ColoredNumber> {
+    let mut col_nums: Vec<ColoredNumber> = vec![];
+    for &tile in tiles {
+        match tile {
+            RegularTile(cn) => col_nums.push(cn),
+            _ => {}
+        }
+    }
+    col_nums
 }
 
 impl Tile {
@@ -270,6 +282,11 @@ mod tile_tests {
         assert_ne!(red5, blue8);
         let alt_red5 = ColoredNumber::new(Red, Five);
         assert_eq!(red5, alt_red5);
+    }
+
+    #[test]
+    fn many_ways_to_filter() {
+
     }
 
     #[test]

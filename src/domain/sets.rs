@@ -7,7 +7,7 @@ use run::Run;
 use crate::domain::Decompose;
 use crate::domain::tiles::Tile;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Set {
     // There are two kinds of sets, either a group or a run
     Group(Group),

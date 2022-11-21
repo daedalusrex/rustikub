@@ -1,5 +1,5 @@
 use crate::domain::table::boneyard::Boneyard;
-use crate::domain::tiles::{Color, ColoredNumber as CN, ColoredNumber, Tile};
+use crate::domain::tiles::{Color, ColoredNumber as CN, ColoredNumber, Tile, only_colored_nums, Number};
 use crate::domain::{Decompose, RummikubError};
 use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
@@ -29,7 +29,7 @@ pub struct Rack {
 
 impl Display for Rack {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Rack has {} tiles", self.rack.len()) // TODO, consider to elaborate
+        write!(f, "Rack has {} tiles", self.rack.len())
     }
 }
 
@@ -85,11 +85,12 @@ impl Rack {
     }
 
     pub fn total_value(&self) -> ScoreValue {
-        todo!()
+        ScoreValue::add_em_up(&self.rack)
     }
 
-    /// Returns all available sets and groups currently exist on the rack.
+    /// Returns all available sets that currently exist on the rack.
     /// Prefers Runs before Groups, so if a tile is needed in a run, it won't be re-used in a possible group
+    /// TODO Empty Vec vs Option Vec? also new rack at same time? is a lot?
     pub fn sets_on_rack(&self) -> Option<(Vec<Set>, Rack)> {
         let mut sets: Vec<Set> = vec![];
         let mut new_rack = self.clone();
@@ -114,52 +115,83 @@ impl Rack {
     }
 
     /// Returns all Groups that are possible to create given the tiles currently present on the rack
+    /// TODO Current Implementation Ignores Jokers
     fn groups_on_rack(&self) -> Vec<Group> {
-        vec![]
-        // TODO implement this
+        let mut groups: Vec<Group> = vec![];
+
+        let mut reg_tiles = only_colored_nums(&self.rack);
+        reg_tiles.sort();
+        // Power of derive is very cool
+        reg_tiles.dedup();
+        for num in Number::iter() {
+            let only_matching_nums: Vec<Tile> = reg_tiles.iter()
+                .filter(|&cn| cn.num == num)
+                .map(|cn| RegularTile(cn.clone()))
+                .collect();
+            if let Some(found) = Group::parse(only_matching_nums) {
+                groups.push(found);
+            }
+        }
+        groups
     }
 
     /// Returns all Runs that are possible to create simultaneously given tiles currently on the rack.
     /// Multiple concurrent possible runs are not returned
+    /// TODO Current Implementation Ignores Jokers
     fn runs_on_rack(&self) -> Vec<Run> {
-        // TODO test and fix this
-        let mut runs_present: Vec<Run> = vec![];
-        let num_jokers = self.rack.iter().filter(|tile| tile.is_joker()).count();
-        let reg_tiles: Vec<Tile> = self
-            .rack
-            .iter()
-            .filter(|tile| !tile.is_joker())
-            .map(|t| t.clone()) // TODO this seems like a dumb work around here
-            .collect();
+        let mut runs: Vec<Run> = vec![];
 
-        // JFC look at this thing, in the end all it does is just pop out the useful ColoredNumbers
-        let reg_cn: Vec<CN> = self
-            .rack
-            .iter()
-            .filter(|tile| !tile.is_joker())
-            .map(|reg_tile| match reg_tile {
-                RegularTile(cn) => cn.clone(),
-                Tile::JokersWild => panic!("Filtering Out of Jokers is Broken"),
-            })
-            .collect();
-
-        // Search for Runs Color by Color
+        let mut reg_tiles = only_colored_nums(&self.rack);
+        reg_tiles.sort();
+        reg_tiles.dedup();
         for color in Color::iter() {
-            let mut only_col: Vec<Tile> = reg_tiles.iter().filter(|t| t.is_color(color)).map(|t| t.clone()).collect();
-            only_col.sort(); // Sorts By Number Order (Lowest is First)
-            //Remove Tiles from the Front First, Prioritize Higher Value Runs
-            let mut from_left = only_col.clone();
-            while !from_left.is_empty() {
-                let try_run = Run::parse(from_left.clone());
-                if try_run.is_ok() {
-                    runs_present.push(try_run.unwrap());
-                    from_left.clear();
+            let all_with_color :Vec<Tile> = reg_tiles.iter()
+                .filter(|&cn| cn.color == color)
+                .map(|cn | RegularTile(cn.clone()))
+                .collect();
+
+            // TODO This is likely not a comprehensive way to find all possible ordered subsets -> BUT WHO CARES
+            let mut from_left = all_with_color.clone();
+            let mut from_right = all_with_color.clone();
+            let mut walk_inwards = all_with_color.clone();
+            // Tiles can't be used multiple times in different runs (at least in this simple implementation)
+            // So if found any run for a particular color, just stop
+            let mut found_at_least_one_for_this_color = false;
+
+            while from_right.len() > 0 && !found_at_least_one_for_this_color {
+                if let Some(found) = Run::parse(from_right.clone()).ok() {
+                    runs.push(found);
+                    found_at_least_one_for_this_color = true;
+                }
+                from_right.pop();
+            }
+
+            while from_left.len() > 0 && !found_at_least_one_for_this_color {
+                if let Some(found) = Run::parse(from_left.clone()).ok() {
+                    runs.push(found);
+                    found_at_least_one_for_this_color = true;
                 }
                 from_left.remove(0);
             }
-            // TODO should also scan from Right, but not use any tiles present from previous runs, (remove from reg tiles)
+
+            let mut left_or_right = false;
+            while walk_inwards.len() > 0 && !found_at_least_one_for_this_color {
+                // Consider changing this to a closure
+                if let Some(found) = Run::parse(walk_inwards.clone()).ok() {
+                    runs.push(found);
+                    found_at_least_one_for_this_color = true;
+                }
+                if left_or_right {
+                    walk_inwards.remove(0);
+                    left_or_right = true;
+                } else {
+                    walk_inwards.pop();
+                    left_or_right = false;
+                }
+            }
+
         }
-        runs_present
+        runs
     }
 
     /// Removes the given vector of tiles from the rack and returns a new version
@@ -193,8 +225,8 @@ impl Rack {
     }
 
     pub fn add_tile_to_rack(&mut self, tile: &Tile) {
-        // TODO should be easy, probably worth a test or two. 
-        todo!()
+        self.rack.push(*tile);
+        self.rack.sort();
     }
 }
 
@@ -205,7 +237,9 @@ mod basic_tests {
     use crate::domain::table::boneyard::Boneyard;
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
     use crate::domain::tiles::{Color, ColoredNumber as CN, Number, Tile};
-    use crate::domain::RummikubError;
+    use crate::domain::{Decompose, RummikubError};
+    use crate::domain::sets::group::Group;
+    use crate::domain::sets::Set;
 
     fn object_mother_some_rack() -> Rack {
         Rack {
@@ -243,5 +277,57 @@ mod basic_tests {
         let some_rack = object_mother_some_rack();
         let result: Result<Rack, RummikubError> = some_rack.remove(&simple_run);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    pub fn correct_detection_of_runs_simple() {
+        let basic_run = Run::of(&CN::new(Color::Black, Number::One), 5).unwrap();
+        let other_run = Run::of(&CN::new(Color::Blue, Number::Five), 3).unwrap();
+        let mut tiles = vec![];
+        tiles.append(basic_run.decompose().as_mut());
+        tiles.append(other_run.decompose().as_mut());
+        let test_rack = Rack{rack: tiles, played_initial_meld: false};
+        let found_runs = test_rack.runs_on_rack();
+        let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
+        // Implicitly relies on sorting by color -> Shrugs
+        assert_eq!(found_runs, vec![other_run.clone(), basic_run.clone()]);
+        assert_eq!(found_sets, vec![Set::Run(other_run), Set::Run(basic_run)]);
+    }
+
+
+    #[test]
+    fn correct_detection_of_groups_simple() {
+        let basic_group = Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
+        let other_group = Group::of(&Number::Twelve, &vec![Color::Red, Color::Black, Color::Orange]).unwrap();
+
+        let mut correct_tiles = vec![];
+        correct_tiles.append(basic_group.decompose().as_mut());
+        correct_tiles.append(other_group.decompose().as_mut());
+
+        let test_rack = Rack{played_initial_meld: false, rack: correct_tiles};
+        let found_groups = test_rack.groups_on_rack();
+        let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
+        assert_eq!(found_groups, vec![basic_group.clone(), other_group.clone()]);
+        assert_eq!(found_sets, vec![Set::Group(basic_group), Set::Group(other_group)]);
+    }
+
+    #[test]
+    pub fn detection_run_and_group() {
+        let basic_run = Run::of(&CN::new(Color::Black, Number::One), 6).unwrap();
+        let other_run = Run::of(&CN::new(Color::Blue, Number::Five), 3).unwrap();
+        let basic_group = Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
+        let other_group = Group::of(&Number::Twelve, &vec![Color::Red, Color::Black, Color::Orange]).unwrap();
+
+        let mut tiles = vec![];
+        tiles.append(basic_run.decompose().as_mut());
+        tiles.append(other_run.decompose().as_mut());
+        tiles.append(basic_group.decompose().as_mut());
+        tiles.append(other_group.decompose().as_mut());
+        let test_rack = Rack{rack: tiles, played_initial_meld: false};
+
+        let (found_sets, modified_rack) = test_rack.sets_on_rack().unwrap();
+
+        assert!(modified_rack.is_empty());
+        assert_eq!(found_sets, vec![Set::Run(other_run), Set::Run(basic_run), Set::Group(basic_group), Set::Group(other_group)]);
     }
 }

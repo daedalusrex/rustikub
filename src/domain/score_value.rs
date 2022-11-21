@@ -10,14 +10,21 @@ pub struct ScoreValue {
 impl ScoreValue {
     /// Creates an arbitrary score value from the provided integer
     pub const fn of(val: u8) -> ScoreValue {
-        ScoreValue{total: val as u16}
+        ScoreValue { total: val as u16 }
     }
 
-    pub fn add_em_up(tiles: Vec<Tile>) {
-        todo!()
-        // Jokers cost -> 30 pt penalty
+    /// Adds a sequence of tiles for their face value. In this abstract case, Jokers are worth 30 pts, as they
+    /// are not attached to any Set.
+    pub fn add_em_up(tiles: &Vec<Tile>) -> ScoreValue {
+        let mut score = ScoreValue::of(0);
+        for tile in tiles {
+            match tile {
+                Tile::RegularTile(cn) => score += cn.num.as_value(),
+                Tile::JokersWild => score += ScoreValue::of(30),
+            }
+        }
+        score
     }
-
 }
 
 impl fmt::Display for ScoreValue {
@@ -53,6 +60,8 @@ impl std::ops::AddAssign for ScoreValue {
 #[cfg(test)]
 pub mod quicktests {
     use crate::domain::score_value::ScoreValue;
+    use crate::domain::tiles::{Color, ColoredNumber, Number};
+    use crate::domain::tiles::Tile::{RegularTile, JokersWild};
 
     #[test]
     fn quick_test_of_score_syntactic_sugar() {
@@ -63,4 +72,23 @@ pub mod quicktests {
         sum += left;
         println!("plus eq {:?}", sum);
     }
+
+    #[test]
+    fn score_adding() {
+        let tiles = vec![
+            RegularTile(ColoredNumber {
+                color: Color::Red,
+                num: Number::One,
+            }),
+            RegularTile(ColoredNumber {
+                color: Color::Blue,
+                num: Number::Two,
+            }),
+            RegularTile(ColoredNumber {
+                color: Color::Black,
+                num: Number::Three,
+            }),
+            JokersWild,
+        ];
+        assert_eq!(ScoreValue::add_em_up(&tiles), ScoreValue::of(36))    }
 }

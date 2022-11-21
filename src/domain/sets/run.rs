@@ -20,10 +20,25 @@ pub struct Run {
     end: Number,
     color: Color,
     jokers: HashSet<Number>,
-    // list: Vec<Number>, // TODO Maybe later
 }
 
 impl Run {
+    /// Creates a run based on defining parameters as given in constructor
+    pub fn of(start: &ColoredNumber, len: u8) -> Option<Run> {
+        if len < MIN_RUN_SIZE as u8 {
+            return None;
+        }
+        let start_val = start.num.as_value();
+        if start_val + ScoreValue::of(len) > ScoreValue::of(13) {
+            return None;
+        }
+        let mut end = start.num;
+        for _ in 0..len {
+            end = end.next();
+        }
+        Some(Run{start: start.num, end, color: start.color, jokers: HashSet::new() })
+    }
+
     // Using the Result<T, E> type instead of Option here. It's better suited for this? than Option
     //  https://doc.rust-lang.org/rust-by-example/error/result.html
     // TODO this should be &Vec<Tile>, a reference instead of a borrow
@@ -133,7 +148,7 @@ impl Run {
         let mut score_sum = ScoreValue::of(0);
         let mut current = self.start;
         while current <= self.end {
-            score_sum = score_sum + current.get_value();
+            score_sum = score_sum + current.as_value();
             current = current.next();
         }
         score_sum
@@ -143,6 +158,8 @@ impl Run {
     /// with the tile attached. Requested Spot is only considered for Jokers, which could be placed
     /// on either end of the run. If none is provided the highest value location will be chosen
     pub fn add_tile(&self, tile: &Tile, requested_spot: Option<Number>) -> Option<Self> {
+        // TODO Consider breaking this up into different types of functions, simple ones first, joker later
+
         // Clojure logic for where to put Joker, only if requested spot is not provided
         let find_highest_target = || -> Option<Number> {
             return if self.end == Number::Thirteen {

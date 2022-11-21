@@ -16,8 +16,26 @@ pub struct Group {
 }
 
 impl Group {
+    /// Creates a group based on defining parameters as given
+    /// Interprets duplicate colors as only one of that color
+    pub fn of(num: &Number, colors: &Vec<Color>) -> Option<Group> {
+        if colors.len() > MAX_GROUP_SIZE {
+            return None;
+        }
+        let mut cols_set = HashSet::new();
+        for &col in colors {
+            cols_set.insert(col);
+        }
+        if cols_set.len() < MIN_GROUP_SIZE {
+            return None;
+        }
+        Some(Group{num: *num, jokers:0, colors: cols_set})
+    }
+
+
     /// Checks the given candidate tiles against a logical constraints that define a Group
     /// If sucessful returns a Group composed of those tiles, otherwise None
+    /// TODO candidates argument should be a reference
     pub fn parse(candidates: Vec<Tile>) -> Option<Group> {
         if candidates.len() > MAX_GROUP_SIZE || candidates.len() < MIN_GROUP_SIZE {
             return None;
@@ -80,7 +98,7 @@ impl Group {
     }
 
     pub fn total_value(&self) -> ScoreValue {
-        let one_num = self.num.get_value();
+        let one_num = self.num.as_value();
         one_num * (self.jokers + self.colors.len() as u8)
     }
 
