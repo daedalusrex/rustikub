@@ -29,7 +29,7 @@ impl GameState {
         };
 
         let mut players = VecDeque::new();
-        for i in 0..conf.num_players {
+        for i in 1..conf.num_players+1 {
             let (rack, new_bones) = Rack::draw_initial_tiles(&board.boneyard);
             board.boneyard = new_bones;
             let info = PlayerInfo::of( &i.to_string());

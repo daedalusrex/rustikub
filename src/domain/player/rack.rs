@@ -145,9 +145,9 @@ impl Rack {
         reg_tiles.sort();
         reg_tiles.dedup();
         for color in Color::iter() {
-            let all_with_color :Vec<Tile> = reg_tiles.iter()
+            let all_with_color: Vec<Tile> = reg_tiles.iter()
                 .filter(|&cn| cn.color == color)
-                .map(|cn | RegularTile(cn.clone()))
+                .map(|cn| RegularTile(cn.clone()))
                 .collect();
 
             // TODO This is likely not a comprehensive way to find all possible ordered subsets -> BUT WHO CARES
@@ -189,7 +189,6 @@ impl Rack {
                     left_or_right = false;
                 }
             }
-
         }
         runs
     }
@@ -199,6 +198,7 @@ impl Rack {
     /// An Error Will be returned if any of the requested tiles are not present in the Rack
     /// Relies on Traits!!
     pub fn remove(&self, items: &impl Decompose) -> Result<Self, RummikubError> {
+        // TODO this is broken
         let tiles = items.decompose();
         let mut remaining = self.rack.clone();
         for tile in &tiles {
@@ -220,8 +220,39 @@ impl Rack {
     /// following the constraints for groups and sets. Returns the new Rack and New Tiles if successful
     /// otherwise returns None, indicating no change was made
     pub fn rearrange_and_place(&self, face_up: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
-        // TODO Implement Rearrange and Place from Rack
-        None
+        let mut new_face = FaceUpTiles::new();
+        let mut new_rack = self.clone();
+        let mut change_occured = false;
+
+        for tile in &self.rack {
+            for existing_set in &face_up.sets {
+                match existing_set {
+                    Set::Group(g) => {
+                        if let Some(real_g) = g.add_tile(tile) {
+                            new_face.sets.push(Set::Group(real_g));
+                            new_rack = new_rack.remove(tile).unwrap();
+                            change_occured = true;
+                        } else {
+                            new_face.sets.push(existing_set.clone())
+                        }
+                    }
+                    Set::Run(r) => {
+                        if let Some(real_r) = r.add_tile(tile, None) {
+                            new_face.sets.push(Set::Run(real_r));
+                            new_rack = new_rack.remove(tile).unwrap();
+                            change_occured = true;
+                        } else {
+                            new_face.sets.push(existing_set.clone());
+                        }
+                    }
+                }
+            }
+        }
+        if change_occured {
+            return Some((new_rack, new_face));
+        } else {
+            return None;
+        }
     }
 
     pub fn add_tile_to_rack(&mut self, tile: &Tile) {
@@ -286,7 +317,7 @@ mod basic_tests {
         let mut tiles = vec![];
         tiles.append(basic_run.decompose().as_mut());
         tiles.append(other_run.decompose().as_mut());
-        let test_rack = Rack{rack: tiles, played_initial_meld: false};
+        let test_rack = Rack { rack: tiles, played_initial_meld: false };
         let found_runs = test_rack.runs_on_rack();
         let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
         // Implicitly relies on sorting by color -> Shrugs
@@ -304,7 +335,7 @@ mod basic_tests {
         correct_tiles.append(basic_group.decompose().as_mut());
         correct_tiles.append(other_group.decompose().as_mut());
 
-        let test_rack = Rack{played_initial_meld: false, rack: correct_tiles};
+        let test_rack = Rack { played_initial_meld: false, rack: correct_tiles };
         let found_groups = test_rack.groups_on_rack();
         let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
         assert_eq!(found_groups, vec![basic_group.clone(), other_group.clone()]);
@@ -323,7 +354,7 @@ mod basic_tests {
         tiles.append(other_run.decompose().as_mut());
         tiles.append(basic_group.decompose().as_mut());
         tiles.append(other_group.decompose().as_mut());
-        let test_rack = Rack{rack: tiles, played_initial_meld: false};
+        let test_rack = Rack { rack: tiles, played_initial_meld: false };
 
         let (found_sets, modified_rack) = test_rack.sets_on_rack().unwrap();
 

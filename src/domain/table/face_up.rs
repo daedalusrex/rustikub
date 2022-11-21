@@ -8,7 +8,7 @@ pub struct Layout;
 #[derive(Debug, Clone)]
 pub struct FaceUpTiles {
     // Publicly viewable and mutable by all players, has all the sets that have been placed
-    sets: Vec<Set>,
+    pub sets: Vec<Set>,
 }
 
 impl FaceUpTiles {
@@ -25,17 +25,20 @@ impl FaceUpTiles {
     }
 
     pub fn new() -> FaceUpTiles {
-        //TODO
         FaceUpTiles { sets: vec![] }
     }
 
     pub fn place_new_sets(&self, sets: &Vec<Set>) -> FaceUpTiles {
-        // planning to call below
-        todo!()
+        let mut new_face_up = self.clone();
+        for set in sets {
+            new_face_up.place_set(set.clone())
+        }
+        new_face_up
+
     }
 
     /// Privately modifies self to add a new set
     fn place_set(&mut self, set: Set) {
-        todo!()
+        self.sets.push(set);
     }
 }

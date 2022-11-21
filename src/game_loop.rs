@@ -29,12 +29,20 @@ pub fn take_turn(rack: &Rack, table: &PublicGameState) -> (Rack, PublicGameState
             new_rack = rack.remove_meld(&meld).unwrap();
             new_table.face_up = table.face_up.place_new_sets(&meld.sets);
             has_placed_this_turn = true;
+            println!("Table Now Has: {:?}", new_table.face_up)
         }
     }
 
     if rack.played_initial_meld || new_rack.played_initial_meld {
         // can attempt to add new tiles to the table
-        if let Some((new_rack, new_face_up)) = rack.rearrange_and_place(&table.face_up) {
+        if let Some((complete_sets, new_rack)) = new_rack.sets_on_rack() {
+            println!("Placing Complete Sets from Rack!");
+            new_table.face_up = new_table.face_up.place_new_sets(&complete_sets);
+            has_placed_this_turn = true;
+        }
+
+
+        if let Some((new_rack, new_face_up)) = new_rack.rearrange_and_place(&table.face_up) {
             println!("Rearranged Face Up Tiles and Placing some from Rack!");
             // TODO verify new_rack properly shadowed as expected here
             new_table.face_up = new_face_up;
