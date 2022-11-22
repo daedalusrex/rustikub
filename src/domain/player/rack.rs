@@ -18,7 +18,7 @@ use crate::domain::tiles::Tile::RegularTile;
 
 const INITIAL_TILES: u8 = 14;
 
-
+// TODO Consider derive Copy instead for consistent use of copy semantics
 ///Player racks can hold any number of tiles (up to all tiles not had by other players)
 /// This information is known only to the owning player
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,6 +46,7 @@ impl Ord for Rack {
 }
 
 impl Rack {
+    // TODO also return new rack as part of state, and consistency with other design choices
     pub fn can_play_initial_meld(&self) -> Option<InitialMeld> {
         if let Some((sets, rack)) = self.sets_on_rack() {
             return InitialMeld::parse(sets);
@@ -198,11 +199,11 @@ impl Rack {
     /// An Error Will be returned if any of the requested tiles are not present in the Rack
     /// Relies on Traits!!
     pub fn remove(&self, items: &impl Decompose) -> Result<Self, RummikubError> {
-        // TODO this is broken
+        // TODO this is broken? Or maybe it's caller
         let tiles = items.decompose();
         let mut remaining = self.rack.clone();
         for tile in &tiles {
-            if !self.rack.contains(tile) {
+            if !remaining.contains(tile) {
                 return Err(RummikubError);
             }
             let pos = remaining.iter().position(|r_tile| r_tile == tile);
@@ -220,6 +221,7 @@ impl Rack {
     /// following the constraints for groups and sets. Returns the new Rack and New Tiles if successful
     /// otherwise returns None, indicating no change was made
     pub fn rearrange_and_place(&self, face_up: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
+        // TODO this looks broken, has waaaay too many sets in face up for what should be like three. causes the error during remove
         let mut new_face = FaceUpTiles::new();
         let mut new_rack = self.clone();
         let mut change_occured = false;
@@ -255,6 +257,7 @@ impl Rack {
         }
     }
 
+    // TODO make return new rack for consistent style
     pub fn add_tile_to_rack(&mut self, tile: &Tile) {
         self.rack.push(*tile);
         self.rack.sort();

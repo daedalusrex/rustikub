@@ -17,48 +17,48 @@ use std::fmt::Formatter;
 
 /// Modifies Potentially the Entire Table, and returns a new game state
 /// Cannot Modify Other Player Racks, but can modify itself
-pub fn take_turn(rack: &Rack, table: &PublicGameState) -> (Rack, PublicGameState) {
-    let mut new_rack = rack.clone();
-    let mut new_table = table.clone();
-    let mut has_placed_this_turn = false;
+pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, PublicGameState) {
+    let mut mut_rack = prev_rack.clone();  // or let mut rack = rack.clone?
+    let mut mut_table = prev_table.clone();
+    let mut placed_this_turn = false;
 
-    if !rack.played_initial_meld {
-        if let Some(meld) = rack.can_play_initial_meld() {
+    if !mut_rack.played_initial_meld {
+        if let Some(meld) = mut_rack.can_play_initial_meld() {
             println!("Playing Initial Meld!");
-            // remove meld from rack, must succeed
-            new_rack = rack.remove_meld(&meld).unwrap();
-            new_table.face_up = table.face_up.place_new_sets(&meld.sets);
-            has_placed_this_turn = true;
-            println!("Table Now Has: {:?}", new_table.face_up)
+            // TODO remove meld from rack, must succeed -> Therefore it should not occur here and be part of return
+            mut_rack = mut_rack.remove_meld(&meld).unwrap();
+            mut_table.face_up = mut_table.face_up.place_new_sets(&meld.sets);
+            placed_this_turn = true;
+            println!("Table Now Has: {:?}", mut_table.face_up)
         }
     }
 
-    if rack.played_initial_meld || new_rack.played_initial_meld {
+    if mut_rack.played_initial_meld {
         // can attempt to add new tiles to the table
-        if let Some((complete_sets, new_rack)) = new_rack.sets_on_rack() {
+        if let Some((complete_sets, rack_without_sets)) = mut_rack.sets_on_rack() {
             println!("Placing Complete Sets from Rack!");
-            new_table.face_up = new_table.face_up.place_new_sets(&complete_sets);
-            has_placed_this_turn = true;
+            mut_table.face_up = mut_table.face_up.place_new_sets(&complete_sets);
+            mut_rack = rack_without_sets;
+            placed_this_turn = true;
         }
 
-
-        if let Some((new_rack, new_face_up)) = new_rack.rearrange_and_place(&table.face_up) {
+        if let Some((rack_after_placing, new_face_up)) = mut_rack.rearrange_and_place(&mut_table.face_up) {
             println!("Rearranged Face Up Tiles and Placing some from Rack!");
-            // TODO verify new_rack properly shadowed as expected here
-            new_table.face_up = new_face_up;
-            has_placed_this_turn = true;
+            mut_table.face_up = new_face_up;
+            mut_rack = rack_after_placing;
+            placed_this_turn = true;
         }
     }
 
-    if !has_placed_this_turn {
+    if !placed_this_turn {
         // Have Not Placed Any Tiles This Turn, therefore MUST draw
         println!("Must Draw from Boneyard!");
-        let (drawn, new_bones) = table.boneyard.draw_one();
-        new_rack.add_tile_to_rack(&drawn);
-        new_table.boneyard = new_bones;
+        let (drawn, new_bones) = prev_table.boneyard.draw_one();
+        mut_rack.add_tile_to_rack(&drawn);
+        mut_table.boneyard = new_bones;
     }
 
-    (new_rack, new_table)
+    (mut_rack, mut_table)
 }
 
 pub fn main_game_loop(initial_state: GameState) -> GameOutcome {
