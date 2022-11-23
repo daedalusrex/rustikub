@@ -14,7 +14,7 @@ use crate::domain::sets::group::Group;
 use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
 use crate::domain::table::face_up::FaceUpTiles;
-use crate::domain::tiles::Tile::RegularTile;
+use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 
 const INITIAL_TILES: u8 = 14;
 
@@ -42,6 +42,12 @@ impl PartialOrd for Rack {
 impl Ord for Rack {
     fn cmp(&self, other: &Self) -> Ordering {
         self.total_value().cmp(&other.total_value())
+    }
+}
+
+impl Decompose for Rack {
+    fn decompose(&self) -> Vec<Tile> {
+        return self.rack.clone();
     }
 }
 
@@ -221,37 +227,22 @@ impl Rack {
     /// following the constraints for groups and sets. Returns the new Rack and New Tiles if successful
     /// otherwise returns None, indicating no change was made
     pub fn rearrange_and_place(&self, face_up: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
-        // TODO this looks broken, has waaaay too many sets in face up for what should be like three. causes the error during remove
-        let mut new_face = FaceUpTiles::new();
-        let mut new_rack = self.clone();
+        let mut mut_face_up = face_up.clone();
+        let tiles_to_attempt = self.decompose();
+        let mut mut_rack = self.clone();
         let mut change_occured = false;
 
-        for tile in &self.rack {
-            for existing_set in &face_up.sets {
-                match existing_set {
-                    Set::Group(g) => {
-                        if let Some(real_g) = g.add_tile(tile) {
-                            new_face.sets.push(Set::Group(real_g));
-                            new_rack = new_rack.remove(tile).unwrap();
-                            change_occured = true;
-                        } else {
-                            new_face.sets.push(existing_set.clone())
-                        }
-                    }
-                    Set::Run(r) => {
-                        if let Some(real_r) = r.add_tile(tile, None) {
-                            new_face.sets.push(Set::Run(real_r));
-                            new_rack = new_rack.remove(tile).unwrap();
-                            change_occured = true;
-                        } else {
-                            new_face.sets.push(existing_set.clone());
-                        }
-                    }
-                }
+        for attempt in tiles_to_attempt {
+            if let Some(place_success) = mut_face_up.place_new_tile(&attempt) {
+                mut_face_up = place_success;
+                mut_rack = mut_rack.remove(&attempt).unwrap();
+                change_occured = true;
             }
         }
+
+        // TODO replace with partial eq derivation on face up
         if change_occured {
-            return Some((new_rack, new_face));
+            return Some((mut_rack, mut_face_up));
         } else {
             return None;
         }
