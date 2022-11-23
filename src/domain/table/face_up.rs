@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use crate::domain::sets::Set;
 use crate::domain::tiles::Tile;
 
@@ -81,5 +82,3 @@ impl FaceUpTiles {
         self.sets.push(set);
     }
 }
-
-// TODO Implement Display

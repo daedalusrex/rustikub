@@ -18,6 +18,7 @@ use std::fmt::Formatter;
 /// Modifies Potentially the Entire Table, and returns a new game state
 /// Cannot Modify Other Player Racks, but can modify itself
 pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, PublicGameState) {
+    // TODO theres an infinite loop somewhere in here. 
     let mut mut_rack = prev_rack.clone();  // or let mut rack = rack.clone?
     let mut mut_table = prev_table.clone();
     let mut placed_this_turn = false;
@@ -40,6 +41,8 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             mut_table.face_up = mut_table.face_up.place_new_sets(&complete_sets);
             mut_rack = rack_without_sets;
             placed_this_turn = true;
+            println!("Table Now Has: {:?}", mut_table.face_up)
+
         }
 
         if let Some((rack_after_placing, new_face_up)) = mut_rack.rearrange_and_place(&mut_table.face_up) {
@@ -47,15 +50,24 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             mut_table.face_up = new_face_up;
             mut_rack = rack_after_placing;
             placed_this_turn = true;
+            println!("Table Now Has: {:?}", mut_table.face_up)
+
         }
     }
 
     if !placed_this_turn {
         // Have Not Placed Any Tiles This Turn, therefore MUST draw
         println!("Must Draw from Boneyard!");
-        let (drawn, new_bones) = prev_table.boneyard.draw_one();
-        mut_rack.add_tile_to_rack(&drawn);
-        mut_table.boneyard = new_bones;
+
+        if let Some((drawn, new_bones)) = prev_table.boneyard.draw_one() {
+            mut_rack.add_tile_to_rack(&drawn);
+            mut_table.boneyard = new_bones;
+        } else {
+            //TODO technically this should not happen, but can if players do not play well or hold on forever
+            println!("All Tiles have been Drawn! Game Over!");
+            // TODO again, taking a shortcut here
+            mut_rack = Rack { rack: vec![], played_initial_meld: true }
+        }
     }
 
     (mut_rack, mut_table)

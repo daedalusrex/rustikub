@@ -31,11 +31,10 @@ impl Boneyard {
 
     /// Removes one tile from the boneyard, and then returns the modified boneyard, and the new tile
     /// Does NOT reshuffle the pile during a given game, to allow for simpler debugging and determinism
-    pub fn draw_one(&self) -> (Tile, Boneyard) {
+    pub fn draw_one(&self) -> Option<(Tile, Boneyard)> {
         let mut new_bones = self.bones.clone();
-        // TODO, need to handle when all tiles are drawn, make Option<>
-        let draw = new_bones.pop().unwrap();
-        (draw, Boneyard { bones: new_bones })
+        let draw = new_bones.pop()?;
+        Some((draw, Boneyard { bones: new_bones }))
     }
 }
 

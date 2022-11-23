@@ -78,7 +78,8 @@ impl Rack {
         // let mut bones: Cow<'_, Boneyard> = Cow::Borrowed(draw_pile); // An alternative feature, lol Cow
         let mut bones = draw_pile.clone();
         for i in 0..INITIAL_TILES {
-            let (tile, new_bones) = bones.draw_one();
+            // Unwrap because CANNOT be empty at start of play
+            let (tile, new_bones) = bones.draw_one().unwrap();
             // Learning: doing another let here causes shadowing, which is not the desired behavior
             bones = new_bones;
             rack.push(tile);
