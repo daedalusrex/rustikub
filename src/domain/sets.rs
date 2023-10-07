@@ -1,11 +1,14 @@
-pub mod group;
-pub mod run;
+use std::fmt::{Display, Formatter};
 
-use crate::domain::score_value::ScoreValue;
 use group::Group;
 use run::Run;
+
 use crate::domain::Decompose;
+use crate::domain::score_value::ScoreValue;
 use crate::domain::tiles::Tile;
+
+pub mod group;
+pub mod run;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Set {
@@ -20,6 +23,16 @@ impl Set {
             Set::Group(g) => g.total_value(),
             Set::Run(r) => r.total_value(),
         }
+    }
+}
+
+
+impl Display for Set {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let tiles = self.decompose();
+        write!(f, "|" ).unwrap();
+        for t in tiles { write!(f, "{}", t).unwrap() }
+        write!(f, "| " )
     }
 }
 

@@ -30,7 +30,7 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             mut_rack = mut_rack.remove_meld(&meld).unwrap();
             mut_table.face_up = mut_table.face_up.place_new_sets(&meld.sets);
             placed_this_turn = true;
-            println!("Table Now Has: {:?}", mut_table.face_up)
+            println!("Table Now Has:\n{}", mut_table.face_up)
         }
     }
 
@@ -41,7 +41,7 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             mut_table.face_up = mut_table.face_up.place_new_sets(&complete_sets);
             mut_rack = rack_without_sets;
             placed_this_turn = true;
-            println!("Table Now Has: {:?}", mut_table.face_up)
+            println!("Table Now Has:\n{}", mut_table.face_up)
 
         }
 
@@ -50,7 +50,7 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             mut_table.face_up = new_face_up;
             mut_rack = rack_after_placing;
             placed_this_turn = true;
-            println!("Table Now Has: {:?}", mut_table.face_up)
+            println!("Table Now Has:\n{}", mut_table.face_up)
 
         }
     }

@@ -1,12 +1,14 @@
+use crate::domain::score_value::ScoreValue;
 use crate::domain::tiles::Number::{
     Eight, Eleven, Five, Four, Nine, One, Seven, Six, Ten, Thirteen, Three, Twelve, Two,
 };
 use crate::domain::{Decompose, RummikubError};
+use colored::{ColoredString, Colorize};
 use rand::seq::IteratorRandom;
+use std::fmt::{write, Display, Formatter};
 use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter, EnumString};
 use Tile::{JokersWild, RegularTile};
-use crate::domain::score_value::ScoreValue;
 
 #[derive(EnumIter, EnumCount, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum Color {
@@ -167,12 +169,12 @@ pub enum Tile {
 impl Decompose for Tile {
     /// can a tile decompose into itself? -> YES lol
     fn decompose(&self) -> Vec<Tile> {
-        return vec![self.clone()]
+        return vec![self.clone()];
     }
 }
 
 /// Given tiles returns their corresponding regular CN's. Drops Jokers
-pub fn only_colored_nums(tiles :&Vec<Tile>) -> Vec<ColoredNumber> {
+pub fn only_colored_nums(tiles: &Vec<Tile>) -> Vec<ColoredNumber> {
     let mut col_nums: Vec<ColoredNumber> = vec![];
     for &tile in tiles {
         match tile {
@@ -181,6 +183,26 @@ pub fn only_colored_nums(tiles :&Vec<Tile>) -> Vec<ColoredNumber> {
         }
     }
     col_nums
+}
+
+impl Display for Tile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let text: ColoredString;
+        match self {
+            JokersWild => text = "J".bright_green(),
+            RegularTile(cn) => {
+                let num_str: String = cn.num.as_value().to_string();
+                match cn.color {
+                    // Could do this as a color implementation...
+                    Color::Red => text = num_str.red(),
+                    Color::Blue => text = num_str.blue(),
+                    Color::Orange => text = num_str.yellow(),
+                    Color::Black => text = num_str.black(),
+                }
+            }
+        };
+        write!(f, "{} ", text.bold().on_bright_black())
+    }
 }
 
 impl Tile {
@@ -195,6 +217,17 @@ impl Tile {
             num: Number::get_rand(),
         };
         RegularTile(cn)
+    }
+
+    pub fn all_unique_numbered() -> Vec<Self> {
+        let mut unique: Vec<Tile> = Vec::new();
+        for color in Color::iter() {
+            for num in Number::iter() {
+                let col_num = ColoredNumber { num, color };
+                unique.push(Tile::RegularTile(col_num))
+            }
+        }
+        return unique;
     }
 
     /// For Learning, English version for this terse line
@@ -231,6 +264,7 @@ mod tile_tests {
     use super::{Color, ColoredNumber, Number, Tile};
     use crate::domain::tiles::Color::{Blue, Red};
     use crate::domain::tiles::Number::{Eight, Five};
+    use colored::Colorize;
     use rand::prelude::IteratorRandom;
     use strum::{EnumCount, IntoEnumIterator};
 
@@ -285,9 +319,7 @@ mod tile_tests {
     }
 
     #[test]
-    fn many_ways_to_filter() {
-
-    }
+    fn many_ways_to_filter() {}
 
     #[test]
     fn random_tiles() {
@@ -298,5 +330,24 @@ mod tile_tests {
         } else {
             assert!(false)
         }
+    }
+
+    #[test]
+    fn all_unique() {
+        //Assert that thsi gives all unique regular tiles. i.e. 13x4 -> 52
+        let foo = Tile::all_unique_numbered();
+        assert_eq!(foo.len(), 52)
+    }
+
+    #[test]
+    fn display_pretty_print() {
+        println!("Now printing very nice display of all unique normal tiles");
+        let mut all = Tile::all_unique_numbered();
+
+        for t in all {
+            print!("{}", t)
+        }
+        print!("{}", Tile::JokersWild);
+        println!()
     }
 }

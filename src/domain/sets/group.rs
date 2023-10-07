@@ -1,6 +1,7 @@
 use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
 use crate::domain::score_value::ScoreValue;
 use std::collections::{HashMap, HashSet};
+use std::fmt::{Display, Formatter, write};
 use crate::domain::Decompose;
 
 const MAX_GROUP_SIZE: usize = 4;
@@ -149,6 +150,7 @@ impl Decompose for Group {
         composite_tiles
     }
 }
+
 
 #[cfg(test)]
 pub mod group_tests {

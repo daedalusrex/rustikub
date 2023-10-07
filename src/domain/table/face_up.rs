@@ -13,6 +13,18 @@ pub struct FaceUpTiles {
     pub sets: Vec<Set>,
 }
 
+use colored;
+use colored::{ColoredString, Colorize};
+
+impl Display for FaceUpTiles {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for s in &self.sets {
+            write!(f, "{}\n", s).unwrap()
+        }
+        Ok(())
+    }
+}
+
 impl FaceUpTiles {
     /// Rules have several types of manipulations
     /// Add one or more tiles from rack to make new set

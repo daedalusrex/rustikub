@@ -73,7 +73,7 @@ mod test_boneyard {
     #[test]
     fn draw_one_gives_new_yard() {
         let bones = Boneyard::new_game();
-        let (tile, new_bones) = bones.draw_one();
+        let (tile, new_bones) = bones.draw_one().expect("KABOOM");
         let old = bones.bones.len();
         let new = new_bones.bones.len();
         assert_ne!(old, new)
