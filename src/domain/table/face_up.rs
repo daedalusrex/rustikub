@@ -45,36 +45,38 @@ impl FaceUpTiles {
     /// Given a candidate tile check if any of the above listed manipulations
     /// can result in a layout that has the tile as part of all the face up sets
     /// TODO for now, just do the simplest possible steps of adding to existing sets
+    /// TODO plan is to eventually add one function for each possible change. The hardest being split
     pub fn place_new_tile(&self, candidate: &Tile) -> Option<FaceUpTiles> {
-        let mut mut_sets = vec![];
-        let mut change_occured = false;
+        let mut mut_sets: Vec<Set> = vec![];
+        let mut tile_was_added = false;
 
         for existing_set in &self.sets {
-            let add_attempt = match existing_set {
-                Set::Group(g) => {
-                    if let Some(updated_group) = g.add_tile(candidate) {
-                        Set::Group(updated_group)
-                    } else {
-                        existing_set.clone()
-                    }
-                }
-                Set::Run(r) => {
-                    if let Some(updated_run) = r.add_tile(candidate, None) {
-                        Set::Run(updated_run)
-                    } else {
-                        existing_set.clone()
-                    }
-                }
-            };
-            if &add_attempt != existing_set {
-                change_occured = true;
-                // TODO just adding to the first possibility may not be the best strategy
-                break;
+            if tile_was_added {
+                mut_sets.push(existing_set.clone());
             }
-            mut_sets.push(add_attempt);
+            else {
+                let set_with_added: Option<Set> = match existing_set {
+                    Set::Group(g) => {
+                        if let Some(updated_group) = g.add_tile(candidate) {
+                            tile_was_added = true;
+                            Some(Set::Group(updated_group))
+                        } else  {None }
+                    }
+                    Set::Run(r) => {
+                        if let Some(updated_run) = r.add_tile(candidate, None) {
+                            tile_was_added = true;
+                            Some(Set::Run(updated_run))
+                        } else { None }
+                    }
+                };
+                if let Some(set_with_added) = set_with_added {
+                    mut_sets.push(set_with_added.clone())
+                }
+                else { mut_sets.push(existing_set.clone())}
+            }
         }
 
-        if change_occured {
+        if tile_was_added {
             return Some(FaceUpTiles{ sets: mut_sets });
         } else {
             None

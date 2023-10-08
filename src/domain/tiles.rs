@@ -197,11 +197,11 @@ impl Display for Tile {
                     Color::Red => text = num_str.red(),
                     Color::Blue => text = num_str.blue(),
                     Color::Orange => text = num_str.yellow(),
-                    Color::Black => text = num_str.black(),
+                    Color::Black => text = num_str.white(),
                 }
             }
         };
-        write!(f, "{} ", text.bold().on_bright_black())
+        write!(f, "{} ", text.bold().on_black())
     }
 }
 
