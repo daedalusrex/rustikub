@@ -342,7 +342,7 @@ mod tile_tests {
     #[test]
     fn display_pretty_print() {
         println!("Now printing very nice display of all unique normal tiles");
-        let mut all = Tile::all_unique_numbered();
+        let all = Tile::all_unique_numbered();
 
         for t in all {
             print!("{}", t)

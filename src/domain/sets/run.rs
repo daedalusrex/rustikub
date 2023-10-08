@@ -508,21 +508,27 @@ mod run_parsing {
 mod other_tests_of_runs {
     use super::*;
     use crate::domain::sets::ParseError::*;
+    use crate::domain::tiles::Color::Red;
     use crate::domain::tiles::Number::*;
     use crate::domain::tiles::Tile::RegularTile;
     use crate::domain::tiles::{Color, ColoredNumber, Number};
     use strum::IntoEnumIterator;
 
     fn good_run() -> (Vec<Tile>, Run) {
-        let original = run_parsing::object_mother_good_run_of_three();
+        let original = vec![
+            RegularTile(ColoredNumber::new(Red, Six)),
+            RegularTile(ColoredNumber::new(Red, Seven)),
+            RegularTile(ColoredNumber::new(Red, Eight)),
+        ];
         let run = Run::parse(original.clone()).unwrap();
-        (original, run)
+        (original.clone(), run.clone())
     }
 
     #[test]
     fn decomposition_matches() {
         let (origin, run) = good_run();
-        assert_eq!(origin, run.decompose())
+        let rot = run.decompose();
+        assert_eq!(origin, rot)
     }
 
     #[test]
