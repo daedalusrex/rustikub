@@ -1,5 +1,5 @@
-use crate::domain::sets::Set;
 use crate::domain::score_value::ScoreValue;
+use crate::domain::sets::Set;
 
 const MINIMUM_MELD_SCORE: ScoreValue = ScoreValue::of(30);
 

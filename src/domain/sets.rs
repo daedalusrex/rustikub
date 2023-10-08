@@ -3,9 +3,9 @@ use std::fmt::{Display, Formatter};
 use group::Group;
 use run::Run;
 
-use crate::domain::Decompose;
 use crate::domain::score_value::ScoreValue;
 use crate::domain::tiles::Tile;
+use crate::domain::Decompose;
 
 pub mod group;
 pub mod run;
@@ -26,13 +26,14 @@ impl Set {
     }
 }
 
-
 impl Display for Set {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let tiles = self.decompose();
-        write!(f, "|" ).unwrap();
-        for t in tiles { write!(f, "{}", t).unwrap() }
-        write!(f, "| " )
+        write!(f, "|").unwrap();
+        for t in tiles {
+            write!(f, "{}", t).unwrap()
+        }
+        write!(f, "| ")
     }
 }
 

@@ -6,8 +6,8 @@ use crate::domain::table::boneyard::Boneyard;
 use crate::domain::player::info::PlayerInfo;
 use crate::domain::player::rack::Rack;
 use crate::domain::player::Player;
-use crate::domain::table::face_up::FaceUpTiles;
 use crate::domain::score_value::ScoreValue;
+use crate::domain::table::face_up::FaceUpTiles;
 use meta::GameOutcome;
 use state::{GameState, PublicGameState};
 use std::cmp::Ordering;
@@ -18,8 +18,8 @@ use std::fmt::Formatter;
 /// Modifies Potentially the Entire Table, and returns a new game state
 /// Cannot Modify Other Player Racks, but can modify itself
 pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, PublicGameState) {
-    // TODO theres an infinite loop somewhere in here. 
-    let mut mut_rack = prev_rack.clone();  // or let mut rack = rack.clone?
+    // TODO theres an infinite loop somewhere in here.
+    let mut mut_rack = prev_rack.clone(); // or let mut rack = rack.clone?
     let mut mut_table = prev_table.clone();
     let mut placed_this_turn = false;
 
@@ -42,16 +42,16 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             mut_rack = rack_without_sets;
             placed_this_turn = true;
             println!("Table Now Has:\n{}", mut_table.face_up)
-
         }
 
-        if let Some((rack_after_placing, new_face_up)) = mut_rack.rearrange_and_place(&mut_table.face_up) {
+        if let Some((rack_after_placing, new_face_up)) =
+            mut_rack.rearrange_and_place(&mut_table.face_up)
+        {
             println!("Rearranged Face Up Tiles and Placing some from Rack!");
             mut_table.face_up = new_face_up;
             mut_rack = rack_after_placing;
             placed_this_turn = true;
             println!("Table Now Has:\n{}", mut_table.face_up)
-
         }
     }
 
@@ -66,7 +66,10 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             //TODO technically this should not happen, but can if players do not play well or hold on forever
             println!("All Tiles have been Drawn! Game Over!");
             // TODO again, taking a shortcut here
-            mut_rack = Rack { rack: vec![], played_initial_meld: true }
+            mut_rack = Rack {
+                rack: vec![],
+                played_initial_meld: true,
+            }
         }
     }
 

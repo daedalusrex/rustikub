@@ -1,11 +1,11 @@
 use super::ParseError;
 use super::ParseError::*;
+use crate::domain::score_value::ScoreValue;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
-use crate::domain::score_value::ScoreValue;
+use crate::domain::Decompose;
 use std::collections::{HashSet, LinkedList};
 use std::vec;
-use crate::domain::Decompose;
 
 const MAX_RUN_SIZE: usize = 13;
 const MIN_RUN_SIZE: usize = 3;
@@ -36,7 +36,12 @@ impl Run {
         for _ in 0..len {
             end = end.next();
         }
-        Some(Run{start: start.num, end, color: start.color, jokers: HashSet::new() })
+        Some(Run {
+            start: start.num,
+            end,
+            color: start.color,
+            jokers: HashSet::new(),
+        })
     }
 
     // Using the Result<T, E> type instead of Option here. It's better suited for this? than Option

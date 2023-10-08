@@ -1,8 +1,8 @@
-use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
 use crate::domain::score_value::ScoreValue;
-use std::collections::{HashMap, HashSet};
-use std::fmt::{Display, Formatter, write};
+use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
 use crate::domain::Decompose;
+use std::collections::{HashMap, HashSet};
+use std::fmt::{write, Display, Formatter};
 
 const MAX_GROUP_SIZE: usize = 4;
 const MIN_GROUP_SIZE: usize = 3;
@@ -30,9 +30,12 @@ impl Group {
         if cols_set.len() < MIN_GROUP_SIZE {
             return None;
         }
-        Some(Group{num: *num, jokers:0, colors: cols_set})
+        Some(Group {
+            num: *num,
+            jokers: 0,
+            colors: cols_set,
+        })
     }
-
 
     /// Checks the given candidate tiles against a logical constraints that define a Group
     /// If sucessful returns a Group composed of those tiles, otherwise None
@@ -150,7 +153,6 @@ impl Decompose for Group {
         composite_tiles
     }
 }
-
 
 #[cfg(test)]
 pub mod group_tests {
@@ -329,7 +331,10 @@ pub mod group_tests {
             JokersWild,
         ])
         .unwrap();
-        let joke = joker_g.add_tile(&RegularTile(ColoredNumber::new(Color::Orange, Number::Five)));
+        let joke = joker_g.add_tile(&RegularTile(ColoredNumber::new(
+            Color::Orange,
+            Number::Five,
+        )));
         assert!(joke.is_some());
         let joke_jok = joker_g.add_tile(&JokersWild);
         assert!(joke_jok.is_some());

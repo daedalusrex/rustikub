@@ -1,5 +1,7 @@
 use crate::domain::table::boneyard::Boneyard;
-use crate::domain::tiles::{Color, ColoredNumber as CN, ColoredNumber, Tile, only_colored_nums, Number};
+use crate::domain::tiles::{
+    only_colored_nums, Color, ColoredNumber as CN, ColoredNumber, Number, Tile,
+};
 use crate::domain::{Decompose, RummikubError};
 use std::borrow::{Borrow, Cow};
 use std::cmp::Ordering;
@@ -132,7 +134,8 @@ impl Rack {
         // Power of derive is very cool
         reg_tiles.dedup();
         for num in Number::iter() {
-            let only_matching_nums: Vec<Tile> = reg_tiles.iter()
+            let only_matching_nums: Vec<Tile> = reg_tiles
+                .iter()
                 .filter(|&cn| cn.num == num)
                 .map(|cn| RegularTile(cn.clone()))
                 .collect();
@@ -153,7 +156,8 @@ impl Rack {
         reg_tiles.sort();
         reg_tiles.dedup();
         for color in Color::iter() {
-            let all_with_color: Vec<Tile> = reg_tiles.iter()
+            let all_with_color: Vec<Tile> = reg_tiles
+                .iter()
                 .filter(|&cn| cn.color == color)
                 .map(|cn| RegularTile(cn.clone()))
                 .collect();
@@ -259,13 +263,13 @@ impl Rack {
 #[cfg(test)]
 mod basic_tests {
     use crate::domain::player::rack::Rack;
+    use crate::domain::sets::group::Group;
     use crate::domain::sets::run::Run;
+    use crate::domain::sets::Set;
     use crate::domain::table::boneyard::Boneyard;
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
     use crate::domain::tiles::{Color, ColoredNumber as CN, Number, Tile};
     use crate::domain::{Decompose, RummikubError};
-    use crate::domain::sets::group::Group;
-    use crate::domain::sets::Set;
 
     fn object_mother_some_rack() -> Rack {
         Rack {
@@ -312,7 +316,10 @@ mod basic_tests {
         let mut tiles = vec![];
         tiles.append(basic_run.decompose().as_mut());
         tiles.append(other_run.decompose().as_mut());
-        let test_rack = Rack { rack: tiles, played_initial_meld: false };
+        let test_rack = Rack {
+            rack: tiles,
+            played_initial_meld: false,
+        };
         let found_runs = test_rack.runs_on_rack();
         let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
         // Implicitly relies on sorting by color -> Shrugs
@@ -320,40 +327,66 @@ mod basic_tests {
         assert_eq!(found_sets, vec![Set::Run(other_run), Set::Run(basic_run)]);
     }
 
-
     #[test]
     fn correct_detection_of_groups_simple() {
-        let basic_group = Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
-        let other_group = Group::of(&Number::Twelve, &vec![Color::Red, Color::Black, Color::Orange]).unwrap();
+        let basic_group =
+            Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
+        let other_group = Group::of(
+            &Number::Twelve,
+            &vec![Color::Red, Color::Black, Color::Orange],
+        )
+        .unwrap();
 
         let mut correct_tiles = vec![];
         correct_tiles.append(basic_group.decompose().as_mut());
         correct_tiles.append(other_group.decompose().as_mut());
 
-        let test_rack = Rack { played_initial_meld: false, rack: correct_tiles };
+        let test_rack = Rack {
+            played_initial_meld: false,
+            rack: correct_tiles,
+        };
         let found_groups = test_rack.groups_on_rack();
         let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
         assert_eq!(found_groups, vec![basic_group.clone(), other_group.clone()]);
-        assert_eq!(found_sets, vec![Set::Group(basic_group), Set::Group(other_group)]);
+        assert_eq!(
+            found_sets,
+            vec![Set::Group(basic_group), Set::Group(other_group)]
+        );
     }
 
     #[test]
     pub fn detection_run_and_group() {
         let basic_run = Run::of(&CN::new(Color::Black, Number::One), 6).unwrap();
         let other_run = Run::of(&CN::new(Color::Blue, Number::Five), 3).unwrap();
-        let basic_group = Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
-        let other_group = Group::of(&Number::Twelve, &vec![Color::Red, Color::Black, Color::Orange]).unwrap();
+        let basic_group =
+            Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
+        let other_group = Group::of(
+            &Number::Twelve,
+            &vec![Color::Red, Color::Black, Color::Orange],
+        )
+        .unwrap();
 
         let mut tiles = vec![];
         tiles.append(basic_run.decompose().as_mut());
         tiles.append(other_run.decompose().as_mut());
         tiles.append(basic_group.decompose().as_mut());
         tiles.append(other_group.decompose().as_mut());
-        let test_rack = Rack { rack: tiles, played_initial_meld: false };
+        let test_rack = Rack {
+            rack: tiles,
+            played_initial_meld: false,
+        };
 
         let (found_sets, modified_rack) = test_rack.sets_on_rack().unwrap();
 
         assert!(modified_rack.is_empty());
-        assert_eq!(found_sets, vec![Set::Run(other_run), Set::Run(basic_run), Set::Group(basic_group), Set::Group(other_group)]);
+        assert_eq!(
+            found_sets,
+            vec![
+                Set::Run(other_run),
+                Set::Run(basic_run),
+                Set::Group(basic_group),
+                Set::Group(other_group)
+            ]
+        );
     }
 }

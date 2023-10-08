@@ -1,12 +1,12 @@
+use crate::domain::tiles::Tile;
 use std::fmt;
 use std::fmt::Formatter;
-use crate::domain::tiles::Tile;
 
 pub mod player;
+pub mod score_value;
 pub mod sets;
 pub mod table;
 pub mod tiles;
-pub mod score_value;
 
 // FYI, doing this instead of mod.rs is the 'preferred' convention
 

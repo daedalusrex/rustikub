@@ -1,6 +1,6 @@
-use std::fmt::{Display, Formatter};
 use crate::domain::sets::Set;
 use crate::domain::tiles::Tile;
+use std::fmt::{Display, Formatter};
 
 ///A layout is a selection of certain sets, representing a particular permutation of their possible configuration
 /// main feature is to verify that after manipulating the table, the new layout is a valid version of the old one
@@ -53,31 +53,35 @@ impl FaceUpTiles {
         for existing_set in &self.sets {
             if tile_was_added {
                 mut_sets.push(existing_set.clone());
-            }
-            else {
+            } else {
                 let set_with_added: Option<Set> = match existing_set {
                     Set::Group(g) => {
                         if let Some(updated_group) = g.add_tile(candidate) {
                             tile_was_added = true;
                             Some(Set::Group(updated_group))
-                        } else  {None }
+                        } else {
+                            None
+                        }
                     }
                     Set::Run(r) => {
                         if let Some(updated_run) = r.add_tile(candidate, None) {
                             tile_was_added = true;
                             Some(Set::Run(updated_run))
-                        } else { None }
+                        } else {
+                            None
+                        }
                     }
                 };
                 if let Some(set_with_added) = set_with_added {
                     mut_sets.push(set_with_added.clone())
+                } else {
+                    mut_sets.push(existing_set.clone())
                 }
-                else { mut_sets.push(existing_set.clone())}
             }
         }
 
         if tile_was_added {
-            return Some(FaceUpTiles{ sets: mut_sets });
+            return Some(FaceUpTiles { sets: mut_sets });
         } else {
             None
         }

@@ -15,6 +15,6 @@ impl std::fmt::Display for PlayerInfo {
 
 impl PlayerInfo {
     pub fn of(name: &String) -> PlayerInfo {
-        PlayerInfo{0: name.clone()}
+        PlayerInfo { 0: name.clone() }
     }
 }

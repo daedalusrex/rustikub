@@ -1,6 +1,6 @@
+use crate::domain::tiles::Tile;
 use std::fmt;
 use std::fmt::Formatter;
-use crate::domain::tiles::Tile;
 
 #[derive(Debug, PartialEq, Ord, Eq, PartialOrd, Copy, Clone)]
 pub struct ScoreValue {
@@ -60,8 +60,8 @@ impl std::ops::AddAssign for ScoreValue {
 #[cfg(test)]
 pub mod quicktests {
     use crate::domain::score_value::ScoreValue;
+    use crate::domain::tiles::Tile::{JokersWild, RegularTile};
     use crate::domain::tiles::{Color, ColoredNumber, Number};
-    use crate::domain::tiles::Tile::{RegularTile, JokersWild};
 
     #[test]
     fn quick_test_of_score_syntactic_sugar() {
@@ -90,5 +90,6 @@ pub mod quicktests {
             }),
             JokersWild,
         ];
-        assert_eq!(ScoreValue::add_em_up(&tiles), ScoreValue::of(36))    }
+        assert_eq!(ScoreValue::add_em_up(&tiles), ScoreValue::of(36))
+    }
 }
