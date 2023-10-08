@@ -1,9 +1,4 @@
-use crate::domain::table::boneyard::Boneyard;
-use crate::domain::tiles::{
-    only_colored_nums, Color, ColoredNumber as CN, ColoredNumber, Number, Tile,
-};
-use crate::domain::{Decompose, RummikubError};
-use std::borrow::{Borrow, Cow};
+use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
@@ -15,8 +10,11 @@ use crate::domain::score_value::ScoreValue;
 use crate::domain::sets::group::Group;
 use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
+use crate::domain::table::boneyard::Boneyard;
 use crate::domain::table::face_up::FaceUpTiles;
-use crate::domain::tiles::Tile::{JokersWild, RegularTile};
+use crate::domain::tiles::Tile::RegularTile;
+use crate::domain::tiles::{only_colored_nums, Color, Number, Tile};
+use crate::domain::{Decompose, RummikubError};
 
 const INITIAL_TILES: u8 = 14;
 
@@ -31,7 +29,11 @@ pub struct Rack {
 
 impl Display for Rack {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Rack has {} tiles", self.rack.len())
+        write!(f, "[ ").unwrap();
+        for t in &self.rack {
+            write!(f, "{}", t).unwrap()
+        }
+        write!(f, "] ({})", self.rack.len())
     }
 }
 

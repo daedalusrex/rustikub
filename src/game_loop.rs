@@ -81,7 +81,10 @@ pub fn main_game_loop(initial_state: GameState) -> GameOutcome {
     let mut current_player = current_state.players.pop_front().unwrap();
 
     while !current_player.rack.is_empty() {
-        println!("{}'s Turn!", current_player.info);
+        println!(
+            "{}'s Turn! Their rack: {}",
+            current_player.info, current_player.rack
+        );
         let (rack, table) = take_turn(&current_player.rack, &current_state.table);
         let updated_player = Player {
             info: current_player.info.clone(),

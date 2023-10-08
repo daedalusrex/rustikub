@@ -50,6 +50,8 @@ impl FaceUpTiles {
         let mut mut_sets: Vec<Set> = vec![];
         let mut tile_was_added = false;
 
+        println!("Attempting to place {}", candidate);
+
         for existing_set in &self.sets {
             if tile_was_added {
                 mut_sets.push(existing_set.clone());
