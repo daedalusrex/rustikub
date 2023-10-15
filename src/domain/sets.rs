@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{format, Display, Formatter};
 
 use group::Group;
 use run::Run;
@@ -29,9 +29,12 @@ impl Set {
 impl Display for Set {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let tiles = self.decompose();
-        write!(f, "|").unwrap();
+        let whoopsie = format!("EXPLODED writing: {:?}", tiles);
+        write!(f, "|").expect("Literally unfailable");
         for t in tiles {
-            write!(f, "{}", t).unwrap()
+            let this_guy = format!(" This Guy: {:?}", t);
+            let msg = whoopsie.clone() + &this_guy;
+            write!(f, "{}", t).expect(&*msg);
         }
         write!(f, "| ")
     }

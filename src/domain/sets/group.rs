@@ -1,8 +1,12 @@
 use crate::domain::score_value::ScoreValue;
-use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
+use crate::domain::tiles::color::Color;
+use crate::domain::tiles::number::Number;
+use crate::domain::tiles::Tile;
+use crate::domain::tiles::Tile::RegularTile;
 use crate::domain::Decompose;
-use std::collections::{HashMap, HashSet};
-use std::fmt::{write, Display, Formatter};
+use std::collections::HashSet;
+use std::fmt::Display;
+use Tile::JokersWild;
 
 const MAX_GROUP_SIZE: usize = 4;
 const MIN_GROUP_SIZE: usize = 3;
@@ -38,7 +42,7 @@ impl Group {
     }
 
     /// Checks the given candidate tiles against a logical constraints that define a Group
-    /// If sucessful returns a Group composed of those tiles, otherwise None
+    /// If successful returns a Group composed of those tiles, otherwise None
     /// TODO candidates argument should be a reference
     pub fn parse(candidates: Vec<Tile>) -> Option<Group> {
         if candidates.len() > MAX_GROUP_SIZE || candidates.len() < MIN_GROUP_SIZE {
@@ -50,31 +54,25 @@ impl Group {
         let mut cols = HashSet::new();
         let first_num: Number;
 
-        // TODO Simplify with ?: https://doc.rust-lang.org/rust-by-example/error/option_unwrap/question_mark.html
-        let first_no_joke = candidates.iter().filter(|tile| !tile.is_joker()).next();
-        if let Some(first_tile) = first_no_joke {
-            if let Tile::RegularTile(first_cn) = first_tile {
-                first_num = first_cn.num;
-            } else {
-                return None;
-            }
-        } else {
-            return None;
+        let first_no_joke = candidates.iter().filter(|tile| !tile.is_joker()).next()?;
+        match first_no_joke {
+            RegularTile(c, n) => first_num = n.clone(),
+            JokersWild => return None,
         }
 
         // Find the first regular tile, that has a number
         for tile in candidates {
             match tile {
-                Tile::JokersWild => num_jokers += 1,
-                Tile::RegularTile(cn) => {
-                    if first_num != cn.num {
+                JokersWild => num_jokers += 1,
+                RegularTile(color, num) => {
+                    if first_num != num {
                         return None;
                     }
-                    group_number = cn.num;
-                    if cols.contains(&cn.color) {
+                    group_number = num;
+                    if cols.contains(&color) {
                         return None;
                     }
-                    cols.insert(cn.color);
+                    cols.insert(color);
                 }
             }
         }
@@ -92,7 +90,7 @@ impl Group {
         self.colors.len() as u8 + self.jokers
     }
 
-    pub fn contains(&self, c: Color) -> bool {
+    pub fn contains(&self, c: &Color) -> bool {
         // TODO Jokers?
         self.colors.contains(&c)
     }
@@ -110,31 +108,31 @@ impl Group {
         if self.colors.len() + self.jokers as usize == MAX_GROUP_SIZE {
             return None;
         }
-        match tile {
-            Tile::JokersWild => {
+        return match tile {
+            JokersWild => {
                 if self.jokers == MAX_JOKERS_IN_GROUP {
                     return None;
                 }
                 let jokers = self.jokers + 1;
-                return Some(Group {
+                Some(Group {
                     num: self.num,
                     colors: self.colors.clone(),
                     jokers,
-                });
+                })
             }
-            Tile::RegularTile(cn) => {
-                if self.contains(cn.color) || self.num != cn.num {
+            RegularTile(color, num, ..) => {
+                if self.contains(color) || &self.num != num {
                     return None;
                 }
                 let mut colors = self.colors.clone();
-                colors.insert(cn.color);
-                return Some(Group {
+                colors.insert(color.clone());
+                Some(Group {
                     num: self.num,
                     colors,
                     jokers: self.jokers,
-                });
+                })
             }
-        }
+        };
     }
 }
 
@@ -142,13 +140,10 @@ impl Decompose for Group {
     fn decompose(&self) -> Vec<Tile> {
         let mut composite_tiles: Vec<Tile> = vec![];
         for joker in 0..self.jokers {
-            composite_tiles.push(Tile::JokersWild);
+            composite_tiles.push(JokersWild.clone());
         }
         for color in &self.colors {
-            composite_tiles.push(Tile::RegularTile(ColoredNumber {
-                color: *color,
-                num: self.num,
-            }))
+            composite_tiles.push(RegularTile(color.clone(), self.num.clone()))
         }
         composite_tiles
     }
@@ -157,25 +152,20 @@ impl Decompose for Group {
 #[cfg(test)]
 pub mod group_tests {
     use super::*;
+    use crate::domain::tiles::color::Color;
+    use crate::domain::tiles::number::Number;
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-    use crate::domain::tiles::{Color, ColoredNumber, Number, Tile};
-    use std::collections::{HashMap, HashSet};
     use std::vec;
+    use Color::*;
+    use Number::*;
 
     fn object_mother_good_group_of_three() -> Vec<Tile> {
-        let first = ColoredNumber {
-            color: Color::get_rand(),
-            num: Number::get_rand(),
-        };
-        let second = ColoredNumber {
-            color: first.color.next(),
-            num: first.num,
-        };
-        let third = ColoredNumber {
-            color: second.color.next(),
-            num: first.num,
-        };
-        vec![RegularTile(first), RegularTile(second), RegularTile(third)]
+        let color = Color::get_rand();
+        let num = Number::get_rand();
+        let first = RegularTile(color, num);
+        let second = RegularTile(color.next(), num);
+        let third = RegularTile(color.next().next(), num);
+        vec![first, second, third]
     }
 
     #[test]
@@ -184,16 +174,16 @@ pub mod group_tests {
         assert_ne!(None, Group::parse(success.clone()));
         if let Some(good_group) = Group::parse(success.clone()) {
             assert_eq!(success.len() as u8, good_group.count());
-            if let Some(RegularTile(test_data)) = success.first() {
-                assert_eq!(test_data.num, good_group.num)
+            if let Some(RegularTile(_, num)) = success.first() {
+                assert_eq!(num, &good_group.num)
             } else {
                 panic!("Test is Broken!!!! There should always be something there")
             }
 
             //Colors in candidates match colors in Group
             for tile in &success {
-                if let RegularTile(cn) = tile {
-                    assert!(good_group.contains(cn.color));
+                if let RegularTile(color, _) = tile {
+                    assert!(good_group.contains(color));
                 } else {
                     panic!("Test Broken! Should be No Jokers Here!")
                 }
@@ -219,36 +209,20 @@ pub mod group_tests {
 
         // Different Numbers, Allowable Colors
         let bad_nums = vec![
-            RegularTile(ColoredNumber {
-                color: Color::Red,
-                num: Number::One,
-            }),
-            RegularTile(ColoredNumber {
-                color: Color::Blue,
-                num: Number::Two,
-            }),
-            RegularTile(ColoredNumber {
-                color: Color::Black,
-                num: Number::Three,
-            }),
+            RegularTile(Red, One),
+            RegularTile(Blue, Two),
+            RegularTile(Black, Three),
         ];
+
         assert_eq!(None, Group::parse(bad_nums));
 
         // Same Numbers, Duplicate Colors
         let duped_colors = vec![
-            RegularTile(ColoredNumber {
-                color: Color::Red,
-                num: Number::One,
-            }),
-            RegularTile(ColoredNumber {
-                color: Color::Red,
-                num: Number::One,
-            }),
-            RegularTile(ColoredNumber {
-                color: Color::Black,
-                num: Number::One,
-            }),
+            RegularTile(Red, One),
+            RegularTile(Red, One),
+            RegularTile(Black, One),
         ];
+
         assert_eq!(None, Group::parse(duped_colors));
     }
 
@@ -296,8 +270,8 @@ pub mod group_tests {
     #[test]
     fn scoring_vals() {
         let known_group = Group::parse(vec![
-            RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
-            RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
+            RegularTile(Red, Five),
+            RegularTile(Blue, Five),
             JokersWild,
         ])
         .unwrap();
@@ -307,34 +281,30 @@ pub mod group_tests {
     #[test]
     fn add_tile_happy() {
         let known_group = Group::parse(vec![
-            RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
-            RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
-            RegularTile(ColoredNumber::new(Color::Orange, Number::Five)),
+            RegularTile(Red, Five),
+            RegularTile(Blue, Five),
+            RegularTile(Orange, Five),
         ])
         .unwrap();
-        let result =
-            known_group.add_tile(&RegularTile(ColoredNumber::new(Color::Black, Number::Five)));
+        let result = known_group.add_tile(&RegularTile(Black, Five));
         assert!(result.is_some());
 
         let parsed = Group::parse(vec![
-            RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
-            RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
-            RegularTile(ColoredNumber::new(Color::Orange, Number::Five)),
-            RegularTile(ColoredNumber::new(Color::Black, Number::Five)),
+            RegularTile(Red, Five),
+            RegularTile(Blue, Five),
+            RegularTile(Orange, Five),
+            RegularTile(Black, Five),
         ])
         .unwrap();
         assert_eq!(parsed, result.unwrap());
 
         let joker_g = Group::parse(vec![
-            RegularTile(ColoredNumber::new(Color::Red, Number::Five)),
-            RegularTile(ColoredNumber::new(Color::Blue, Number::Five)),
+            RegularTile(Red, Five),
+            RegularTile(Blue, Five),
             JokersWild,
         ])
         .unwrap();
-        let joke = joker_g.add_tile(&RegularTile(ColoredNumber::new(
-            Color::Orange,
-            Number::Five,
-        )));
+        let joke = joker_g.add_tile(&RegularTile(Orange, Five));
         assert!(joke.is_some());
         let joke_jok = joker_g.add_tile(&JokersWild);
         assert!(joke_jok.is_some());

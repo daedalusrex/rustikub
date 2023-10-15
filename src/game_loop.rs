@@ -27,7 +27,10 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
         if let Some(meld) = mut_rack.can_play_initial_meld() {
             println!("Playing Initial Meld!");
             // TODO remove meld from rack, must succeed -> Therefore it should not occur here and be part of return
-            mut_rack = mut_rack.remove_meld(&meld).unwrap();
+            // Very ambitious logic past self. It's true, but only if the program the way I theorize
+            mut_rack = mut_rack
+                .remove_meld(&meld)
+                .expect("Meld Could not be removed!");
             mut_table.face_up = mut_table.face_up.place_new_sets(&meld.sets);
             placed_this_turn = true;
             println!("Table Now Has:\n{}", mut_table.face_up)
@@ -78,7 +81,7 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
 
 pub fn main_game_loop(initial_state: GameState) -> GameOutcome {
     let mut current_state = initial_state.clone();
-    let mut current_player = current_state.players.pop_front().unwrap();
+    let mut current_player = current_state.players.pop_front().expect("Lost players!");
 
     while !current_player.rack.is_empty() {
         println!(
@@ -96,7 +99,10 @@ pub fn main_game_loop(initial_state: GameState) -> GameOutcome {
         }
         current_state.players.push_back(updated_player);
         current_state.table = table;
-        current_player = current_state.players.pop_front().unwrap();
+        current_player = current_state
+            .players
+            .pop_front()
+            .expect("Where is next player?");
     }
 
     //End Game, Compute Result
@@ -104,6 +110,11 @@ pub fn main_game_loop(initial_state: GameState) -> GameOutcome {
     println!("Game Over! {} Wins!", winner.info);
 
     // TODO not sure that ordering worked, test this
-    let loser = current_state.players.iter().max().unwrap().clone();
+    let loser = current_state
+        .players
+        .iter()
+        .max()
+        .expect("Tie maybe?")
+        .clone();
     GameOutcome { winner, loser }
 }

@@ -19,7 +19,7 @@ impl ScoreValue {
         let mut score = ScoreValue::of(0);
         for tile in tiles {
             match tile {
-                Tile::RegularTile(cn) => score += cn.num.as_value(),
+                Tile::RegularTile(c, n) => score += n.as_value(),
                 Tile::JokersWild => score += ScoreValue::of(30),
             }
         }
@@ -60,8 +60,10 @@ impl std::ops::AddAssign for ScoreValue {
 #[cfg(test)]
 pub mod quicktests {
     use crate::domain::score_value::ScoreValue;
+    use crate::domain::tiles::color::Color;
+    use crate::domain::tiles::number::Number;
+
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-    use crate::domain::tiles::{Color, ColoredNumber, Number};
 
     #[test]
     fn quick_test_of_score_syntactic_sugar() {
@@ -76,18 +78,9 @@ pub mod quicktests {
     #[test]
     fn score_adding() {
         let tiles = vec![
-            RegularTile(ColoredNumber {
-                color: Color::Red,
-                num: Number::One,
-            }),
-            RegularTile(ColoredNumber {
-                color: Color::Blue,
-                num: Number::Two,
-            }),
-            RegularTile(ColoredNumber {
-                color: Color::Black,
-                num: Number::Three,
-            }),
+            RegularTile(Color::Red, Number::One),
+            RegularTile(Color::Blue, Number::Two),
+            RegularTile(Color::Black, Number::Three),
             JokersWild,
         ];
         assert_eq!(ScoreValue::add_em_up(&tiles), ScoreValue::of(36))

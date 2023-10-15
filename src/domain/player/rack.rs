@@ -12,8 +12,10 @@ use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
 use crate::domain::table::boneyard::Boneyard;
 use crate::domain::table::face_up::FaceUpTiles;
-use crate::domain::tiles::Tile::RegularTile;
-use crate::domain::tiles::{only_colored_nums, Color, Number, Tile};
+use crate::domain::tiles::color::Color;
+use crate::domain::tiles::number::Number;
+use crate::domain::tiles::Tile::{JokersWild, RegularTile};
+use crate::domain::tiles::{only_regular_tiles, Tile};
 use crate::domain::{Decompose, RummikubError};
 
 const INITIAL_TILES: u8 = 14;
@@ -131,15 +133,18 @@ impl Rack {
     fn groups_on_rack(&self) -> Vec<Group> {
         let mut groups: Vec<Group> = vec![];
 
-        let mut reg_tiles = only_colored_nums(&self.rack);
+        let mut reg_tiles = only_regular_tiles(&self.rack);
         reg_tiles.sort();
         // Power of derive is very cool
         reg_tiles.dedup();
         for num in Number::iter() {
             let only_matching_nums: Vec<Tile> = reg_tiles
                 .iter()
-                .filter(|&cn| cn.num == num)
-                .map(|cn| RegularTile(cn.clone()))
+                .filter(|t| match t {
+                    RegularTile(c, n) => n == &num,
+                    _ => false,
+                })
+                .map(|x| x.clone())
                 .collect();
             if let Some(found) = Group::parse(only_matching_nums) {
                 groups.push(found);
@@ -150,18 +155,21 @@ impl Rack {
 
     /// Returns all Runs that are possible to create simultaneously given tiles currently on the rack.
     /// Multiple concurrent possible runs are not returned
-    /// TODO Current Implementation Ignores Jokers
+    /// TODO Current Implementation Ignores Jokers  -> VERY BAD
     fn runs_on_rack(&self) -> Vec<Run> {
         let mut runs: Vec<Run> = vec![];
 
-        let mut reg_tiles = only_colored_nums(&self.rack);
+        let mut reg_tiles = only_regular_tiles(&self.rack); // TODO This will break something
         reg_tiles.sort();
         reg_tiles.dedup();
         for color in Color::iter() {
             let all_with_color: Vec<Tile> = reg_tiles
                 .iter()
-                .filter(|&cn| cn.color == color)
-                .map(|cn| RegularTile(cn.clone()))
+                .filter(|t| match t {
+                    RegularTile(c, n) => c == &color,
+                    _ => false,
+                })
+                .map(|t| t.clone())
                 .collect();
 
             // TODO This is likely not a comprehensive way to find all possible ordered subsets -> BUT WHO CARES
@@ -237,22 +245,22 @@ impl Rack {
         let mut mut_face_up = face_up.clone();
         let tiles_to_attempt = self.decompose();
         let mut mut_rack = self.clone();
-        let mut change_occured = false;
+        let mut change_occurred = false;
 
         for attempt in tiles_to_attempt {
             if let Some(place_success) = mut_face_up.place_new_tile(&attempt) {
                 mut_face_up = place_success;
                 mut_rack = mut_rack.remove(&attempt).unwrap();
-                change_occured = true;
+                change_occurred = true;
             }
         }
 
         // TODO replace with partial eq derivation on face up
-        if change_occured {
-            return Some((mut_rack, mut_face_up));
+        return if change_occurred {
+            Some((mut_rack, mut_face_up))
         } else {
-            return None;
-        }
+            None
+        };
     }
 
     // TODO make return new rack for consistent style
@@ -269,8 +277,10 @@ mod basic_tests {
     use crate::domain::sets::run::Run;
     use crate::domain::sets::Set;
     use crate::domain::table::boneyard::Boneyard;
+    use crate::domain::tiles::color::Color;
+    use crate::domain::tiles::number::Number;
+    use crate::domain::tiles::Tile;
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-    use crate::domain::tiles::{Color, ColoredNumber as CN, Number, Tile};
     use crate::domain::{Decompose, RummikubError};
 
     fn object_mother_some_rack() -> Rack {
@@ -280,9 +290,9 @@ mod basic_tests {
                 Tile::any_regular(),
                 Tile::any_regular(),
                 Tile::any_regular(),
-                RegularTile(CN::new(Color::Black, Number::Five)),
-                RegularTile(CN::new(Color::Black, Number::Six)),
-                RegularTile(CN::new(Color::Black, Number::Seven)),
+                RegularTile(Color::Black, Number::Five),
+                RegularTile(Color::Black, Number::Six),
+                RegularTile(Color::Black, Number::Seven),
             ],
             played_initial_meld: false,
         }
@@ -301,9 +311,9 @@ mod basic_tests {
     #[test]
     pub fn removal_of_different_items() {
         let simple_run_vec = vec![
-            RegularTile(CN::new(Color::Black, Number::Five)),
-            RegularTile(CN::new(Color::Black, Number::Six)),
-            RegularTile(CN::new(Color::Black, Number::Seven)),
+            RegularTile(Color::Black, Number::Five),
+            RegularTile(Color::Black, Number::Six),
+            RegularTile(Color::Black, Number::Seven),
         ];
         let simple_run = Run::parse(simple_run_vec.clone()).unwrap();
         let some_rack = object_mother_some_rack();
@@ -313,8 +323,8 @@ mod basic_tests {
 
     #[test]
     pub fn correct_detection_of_runs_simple() {
-        let basic_run = Run::of(&CN::new(Color::Black, Number::One), 5).unwrap();
-        let other_run = Run::of(&CN::new(Color::Blue, Number::Five), 3).unwrap();
+        let basic_run = Run::of(Number::One, Color::Black, 5).expect("BROKEN");
+        let other_run = Run::of(Number::Five, Color::Blue, 3).expect("BROKEN");
         let mut tiles = vec![];
         tiles.append(basic_run.decompose().as_mut());
         tiles.append(other_run.decompose().as_mut());
@@ -323,8 +333,8 @@ mod basic_tests {
             played_initial_meld: false,
         };
         let found_runs = test_rack.runs_on_rack();
-        let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
-        // Implicitly relies on sorting by color -> Shrugs
+        let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap(); // TODO unwrap bad
+                                                                             // Implicitly relies on sorting by color -> Shrugs
         assert_eq!(found_runs, vec![other_run.clone(), basic_run.clone()]);
         assert_eq!(found_sets, vec![Set::Run(other_run), Set::Run(basic_run)]);
     }
@@ -358,8 +368,8 @@ mod basic_tests {
 
     #[test]
     pub fn detection_run_and_group() {
-        let basic_run = Run::of(&CN::new(Color::Black, Number::One), 6).unwrap();
-        let other_run = Run::of(&CN::new(Color::Blue, Number::Five), 3).unwrap();
+        let basic_run = Run::of(Number::One, Color::Black, 6).unwrap();
+        let other_run = Run::of(Number::Five, Color::Blue, 3).unwrap();
         let basic_group =
             Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
         let other_group = Group::of(

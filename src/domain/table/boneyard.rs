@@ -1,3 +1,5 @@
+use crate::domain::tiles::color::Color;
+use crate::domain::tiles::number::Number;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use crate::domain::tiles::*;
 use rand::prelude::SliceRandom;
@@ -21,8 +23,8 @@ impl Boneyard {
         let mut tiles = vec![JokersWild, JokersWild]; // tradeoffs vs push push?
         for color in Color::iter() {
             for num in Number::iter() {
-                tiles.push(RegularTile(ColoredNumber { color, num }));
-                tiles.push(RegularTile(ColoredNumber { color, num }));
+                tiles.push(RegularTile(color, num));
+                tiles.push(RegularTile(color, num));
             }
         }
         tiles.shuffle(&mut rand::thread_rng());
@@ -53,11 +55,11 @@ mod test_boneyard {
         assert_eq!(bones.len(), 106);
 
         for c in Color::iter() {
-            let count = bones.iter().filter(|t| t.is_color(c)).count();
+            let count = bones.iter().filter(|t| t.is_color(&c)).count();
             assert_eq!(count, 26);
         }
         for i in Number::iter() {
-            let count = bones.iter().filter(|t| t.is_number(i)).count();
+            let count = bones.iter().filter(|t| t.is_number(&i)).count();
             assert_eq!(count, 8);
         }
         let jokers = bones.iter().filter(|t| t.is_joker()).count();
@@ -65,7 +67,7 @@ mod test_boneyard {
 
         // Same test, but now, with Closures!
         // Note, the moving and ownership here is bad, but is an excellent example of syntax
-        let pred = |tile: &Tile| tile.is_color(Color::Red);
+        let pred = |tile: &Tile| tile.is_color(&Color::Red);
         let count = bones.into_iter().filter(pred).count();
         assert_eq!(count, 26)
     }
