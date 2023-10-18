@@ -19,7 +19,7 @@ pub enum Tile {
 
 impl Decompose for Tile {
     /// can a tile decompose into itself? -> YES lol
-    fn decompose(&self) -> Vec<Tile> {
+    fn decompose(&self) -> TileSequence {
         return vec![self.clone()];
     }
 }
@@ -44,13 +44,32 @@ impl Display for Tile {
     }
 }
 
-pub fn only_regular_tiles(tiles: &Vec<Tile>) -> Vec<Tile> {
+pub fn only_regular_tiles(tiles: &Vec<Tile>) -> TileSequence {
     // TODO, somehow maybe use where, to bound the return type to only show regular tiles
     return tiles
         .iter()
         .filter(|t| t.is_regular())
         .map(|t| t.clone())
         .collect();
+}
+
+// Just for testing out type aliases
+// https://doc.rust-lang.org/beta/reference/items/type-aliases.html
+/// An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
+type TileSequence = Vec<Tile>;
+
+pub fn list_all_subsequences<T>(seq: &Vec<T>) -> Vec<Vec<T>>
+where
+    T: Clone,
+{
+    let mut subsequences: Vec<Vec<T>> = vec![];
+    for i in 0..seq.len() {
+        for j in i..seq.len() {
+            let sub = seq[i..=j].to_vec();
+            subsequences.push(sub);
+        }
+    }
+    return subsequences;
 }
 
 impl Tile {
@@ -96,11 +115,11 @@ impl Tile {
 
 #[cfg(test)]
 mod tile_tests {
-    use super::Tile;
+    use super::{list_all_subsequences, Tile};
     use crate::domain::tiles::color::Color;
-    use crate::domain::tiles::color::Color::{Black, Blue, Red};
+    use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number;
-    use crate::domain::tiles::number::Number::{Eight, Five, Twelve};
+    use crate::domain::tiles::number::Number::*;
     use crate::domain::tiles::Tile::RegularTile;
     use colored::Colorize;
     use strum::{EnumCount, IntoEnumIterator};
@@ -117,18 +136,18 @@ mod tile_tests {
         assert!(some_tile.is_color(&Red));
         assert_eq!(some_tile.is_color(&Black), false);
         assert!(some_tile.is_number(&Twelve));
-        assert_eq!(some_tile.is_number(&Number::One), false);
+        assert_eq!(some_tile.is_number(&One), false);
         assert_eq!(some_tile.is_joker(), false);
         assert!(Tile::JokersWild.is_joker());
     }
 
     #[test]
     fn number_ordering() {
-        assert!(Number::One < Number::Two);
-        assert!(Number::Two < Number::Thirteen);
-        let mut prev = Number::One;
+        assert!(One < Two);
+        assert!(Two < Thirteen);
+        let mut prev = One;
         for num in Number::iter() {
-            if num == Number::One {
+            if num == One {
                 continue;
             } else {
                 assert!(prev < num);
@@ -140,7 +159,7 @@ mod tile_tests {
     #[test]
     fn color_equality() {
         assert_ne!(Red, Black);
-        assert_ne!(Blue, Color::Orange);
+        assert_ne!(Blue, Orange);
     }
 
     #[test]
@@ -185,5 +204,46 @@ mod tile_tests {
         }
         print!("{}", Tile::JokersWild);
         println!()
+    }
+
+    #[test]
+    fn all_contiguous_subsequences_from_generic_vec_simple() {
+        let simple_case = vec![1, 2, 3];
+
+        let mut expected = vec![
+            vec![1],
+            vec![1, 2],
+            vec![1, 2, 3],
+            vec![2, 3],
+            vec![2],
+            vec![3],
+        ];
+
+        expected.sort();
+        let mut actual = list_all_subsequences(&simple_case);
+        actual.sort();
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn all_contiguous_subsequences_from_generic_vec_hard() {
+        let simple_case = vec![1, 2, 3, 4];
+
+        let mut expected = vec![
+            vec![1],
+            vec![1, 2],
+            vec![1, 2, 3],
+            vec![1, 2, 3, 4],
+            vec![2],
+            vec![2, 3],
+            vec![2, 3, 4],
+            vec![3],
+            vec![3, 4],
+            vec![4],
+        ];
+        expected.sort();
+        let mut actual = list_all_subsequences(&simple_case);
+        actual.sort();
+        assert_eq!(actual, expected)
     }
 }
