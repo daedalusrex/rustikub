@@ -1,6 +1,7 @@
 pub mod color;
 pub mod number;
 
+use crate::domain::score_value::ScoreValue;
 use crate::domain::Decompose;
 use color::Color;
 use colored::ColoredString;
@@ -72,6 +73,33 @@ where
     return subsequences;
 }
 
+/// Ranks a given set of Tile Sequences (or what have you) by their Scores
+/// Highest Value is first.
+/// TODO probably a way to do this by implementing the partial order trait and breaking this up...
+pub fn highest_value_collection<'a, T>(collections: &Vec<&'a T>) -> Option<&'a T>
+where
+    T: Decompose,
+{
+    // TODO the idiomatic way which require Ord for (ScoreValue, &T)
+    // TODO How to implement traits for "adhoc" tuples? (maybe make them a type...)
+    // let max_value = sequences
+    //     .iter()
+    //     .map(|&col| (ScoreValue::add_em_up(&col.decompose()), col))
+    //     .max();
+    // let (_, col) = max_value?;
+    // Some(col)
+    let mut max_value = ScoreValue::of(0);
+    let mut max_col: &T = collections[0];
+    for &col in collections {
+        let col_value = ScoreValue::add_em_up(&col.decompose());
+        if col_value > max_value {
+            max_value = col_value;
+            max_col = &col;
+        }
+    }
+    return Some(max_col);
+}
+
 impl Tile {
     pub fn any_regular() -> Self {
         RegularTile(Color::get_rand(), Number::get_rand())
@@ -115,7 +143,8 @@ impl Tile {
 
 #[cfg(test)]
 mod tile_tests {
-    use super::{list_all_subsequences, Tile};
+    use super::{highest_value_collection, list_all_subsequences, Tile};
+    use crate::domain::score_value::ScoreValue;
     use crate::domain::tiles::color::Color;
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number;
@@ -245,5 +274,15 @@ mod tile_tests {
         let mut actual = list_all_subsequences(&simple_case);
         actual.sort();
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn rank_collections_correctly() {
+        let base_case = RegularTile(Blue, One);
+        let actual = highest_value_collection(&vec![&base_case]);
+        assert_eq!(Some(&base_case), actual);
+        println!("actual: {:?}", actual)
+        // TODO, maybe instead return a reference to the original?
+        // TODO How do pointers work?
     }
 }

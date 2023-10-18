@@ -172,13 +172,14 @@ impl Rack {
                 .map(|t| t.clone())
                 .collect();
 
+            // Tiles can't be used multiple times in different runs (at least in this simple implementation)
+            // So if found any run for a particular color, just stop
+            let mut found_at_least_one_for_this_color = false;
+
             // TODO This is likely not a comprehensive way to find all possible ordered subsets -> BUT WHO CARES
             let mut from_left = all_with_color.clone();
             let mut from_right = all_with_color.clone();
             let mut walk_inwards = all_with_color.clone();
-            // Tiles can't be used multiple times in different runs (at least in this simple implementation)
-            // So if found any run for a particular color, just stop
-            let mut found_at_least_one_for_this_color = false;
 
             while from_right.len() > 0 && !found_at_least_one_for_this_color {
                 if let Some(found) = Run::parse(from_right.clone()).ok() {
