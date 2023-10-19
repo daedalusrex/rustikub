@@ -8,6 +8,7 @@ use colored::ColoredString;
 use colored::Colorize;
 use number::Number;
 use rand::seq::IteratorRandom;
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use strum::IntoEnumIterator;
 use Tile::{JokersWild, RegularTile};
@@ -73,13 +74,21 @@ where
     return subsequences;
 }
 
+fn ordering_closure<T: Decompose>(_self: &&T, _other: &&T) -> Ordering {
+    // I don't know what && means, but ChatGPT says it works so....
+    let self_score = ScoreValue::add_em_up(&_self.decompose());
+    let other_score = ScoreValue::add_em_up(&_other.decompose());
+    return Ord::cmp(&self_score, &other_score);
+}
+
 /// Ranks a given set of Tile Sequences (or what have you) by their Scores
 /// Highest Value is first.
 /// TODO probably a way to do this by implementing the partial order trait and breaking this up...
-pub fn highest_value_collection<'a, T>(collections: &Vec<&'a T>) -> Option<&'a T>
-where
-    T: Decompose,
-{
+pub fn highest_value_collection<'a, T: Decompose>(collections: &'a mut Vec<&T>) -> Option<&'a T> {
+    // An inner function, No need for a closure since it doesn't use anything in the outer scope
+    collections.sort_by(ordering_closure);
+    collections.last().copied()
+
     // TODO the idiomatic way which require Ord for (ScoreValue, &T)
     // TODO How to implement traits for "adhoc" tuples? (maybe make them a type...)
     // let max_value = sequences
@@ -88,16 +97,16 @@ where
     //     .max();
     // let (_, col) = max_value?;
     // Some(col)
-    let mut max_value = ScoreValue::of(0);
-    let mut max_col: &T = collections[0];
-    for &col in collections {
-        let col_value = ScoreValue::add_em_up(&col.decompose());
-        if col_value > max_value {
-            max_value = col_value;
-            max_col = &col;
-        }
-    }
-    return Some(max_col);
+    // let mut max_value = ScoreValue::of(0);
+    // let mut max_col: &T = collections[0];
+    // for &col in collections {
+    //     let col_value = ScoreValue::add_em_up(&col.decompose());
+    //     if col_value > max_value {
+    //         max_value = col_value;
+    //         max_col = &col;
+    //     }
+    // }
+    // return Some(max_col);
 }
 
 impl Tile {
@@ -145,12 +154,15 @@ impl Tile {
 mod tile_tests {
     use super::{highest_value_collection, list_all_subsequences, Tile};
     use crate::domain::score_value::ScoreValue;
+    use crate::domain::sets::group::Group;
     use crate::domain::tiles::color::Color;
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number;
     use crate::domain::tiles::number::Number::*;
     use crate::domain::tiles::Tile::RegularTile;
+    use crate::domain::Decompose;
     use colored::Colorize;
+    use std::cmp::Ordering;
     use strum::{EnumCount, IntoEnumIterator};
 
     #[test]
@@ -279,10 +291,45 @@ mod tile_tests {
     #[test]
     fn rank_collections_correctly() {
         let base_case = RegularTile(Blue, One);
-        let actual = highest_value_collection(&vec![&base_case]);
+        let mut base_vec = vec![&base_case];
+        let actual = highest_value_collection(&mut base_vec);
         assert_eq!(Some(&base_case), actual);
-        println!("actual: {:?}", actual)
-        // TODO, maybe instead return a reference to the original?
-        // TODO How do pointers work?
+        println!("actual: {:?}", actual);
+        // TODO some day, dynamic arrays of boxes would be cool
+        // require Box<dyn Trait>
+        // let real_group = Group::of(&Two, &vec![Red, Blue, Black]).expect("BROKEN");
+        // let real_case: Vec<Box<&dyn Decompose>> = vec![Box::new(&base_case), Box::new(&real_group)];
+        // let wowza = highest_value_collection(real_case);
+        let twos = Group::of(&Two, &vec![Red, Blue, Black]).expect("BROKEN");
+        let fours = Group::of(&Four, &vec![Red, Blue, Black]).expect("BROKEN");
+        let mut group_vec = vec![&twos, &fours];
+        let actual = highest_value_collection(&mut group_vec);
+        assert_eq!(Some(&fours), actual);
+        println!("actual: {:?}", actual);
+    }
+
+    /// Not directly relevant for Rummikub, but works, and demonstrates how to
+    /// create a sorting behavior for a vector of vectors
+    /// Since it is more difficult to implement the ord trait for vectors since I don't own that crate
+    /// There may be a way to do it with associated types?
+    /// see: https://doc.rust-lang.org/std/vec/struct.Vec.html#method.sort_by
+    #[test]
+    fn sratch_sorting_vectors_against_vectors() {
+        let foo = vec![1, 2, 3];
+        let bar = vec![1, 2];
+        let baz = vec![];
+
+        let mut foobar = vec![foo, bar, baz];
+        let my_clos = |one: &Vec<i32>, other: &Vec<i32>| -> Ordering {
+            if one.len() < other.len() {
+                return Ordering::Less;
+            } else if one.len() == other.len() {
+                return Ordering::Equal;
+            }
+            Ordering::Greater
+        };
+
+        foobar.sort_by(my_clos);
+        println!("foobar {:?}", foobar)
     }
 }

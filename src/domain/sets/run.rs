@@ -492,14 +492,12 @@ mod other_tests_of_runs {
     #[test]
     fn add_tile_happy_path() {
         let (origin, run) = good_run();
-        let mut last_number = Number::get_rand();
         let origin_tile = origin.last().expect("BROKEN");
         if let RegularTile(color, num) = origin_tile {
             if num == &Thirteen {
                 // TODO UGH randomness while testing -> try different test later
                 return;
             }
-            last_number = num.clone();
 
             let new_tile = RegularTile(color.clone(), num.clone());
             let result = run.add_tile(&new_tile, None);
