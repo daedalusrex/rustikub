@@ -11,7 +11,6 @@ fn main() {
     use game_loop::state::GameState;
     use game_loop::*;
     println!("Hello There! Welcome to Rustikub!");
-    // TODO Hardcoded for now, later can be controlled by user
     println!("Now Playing A Game With 4 Players");
     let conf = GameConfig { num_players: 4 };
     let game1 = GameState::init_game(conf);

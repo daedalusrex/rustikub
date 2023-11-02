@@ -176,13 +176,14 @@ impl Rack {
             // So if found any run for a particular color, just stop
             let mut found_at_least_one_for_this_color = false;
 
-            // TODO This is likely not a comprehensive way to find all possible ordered subsets -> BUT WHO CARES
+            // TODO This is likely not a comprehensive way to find all possible ordered subsets
+            // TODO this is where to replace with the newly created all sub-sets thing
             let mut from_left = all_with_color.clone();
             let mut from_right = all_with_color.clone();
             let mut walk_inwards = all_with_color.clone();
 
             while from_right.len() > 0 && !found_at_least_one_for_this_color {
-                if let Some(found) = Run::parse(from_right.clone()).ok() {
+                if let Some(found) = Run::parse(&from_right) {
                     runs.push(found);
                     found_at_least_one_for_this_color = true;
                 }
@@ -190,7 +191,7 @@ impl Rack {
             }
 
             while from_left.len() > 0 && !found_at_least_one_for_this_color {
-                if let Some(found) = Run::parse(from_left.clone()).ok() {
+                if let Some(found) = Run::parse(&from_left) {
                     runs.push(found);
                     found_at_least_one_for_this_color = true;
                 }
@@ -200,7 +201,7 @@ impl Rack {
             let mut left_or_right = false;
             while walk_inwards.len() > 0 && !found_at_least_one_for_this_color {
                 // Consider changing this to a closure
-                if let Some(found) = Run::parse(walk_inwards.clone()).ok() {
+                if let Some(found) = Run::parse(&walk_inwards) {
                     runs.push(found);
                     found_at_least_one_for_this_color = true;
                 }
@@ -230,6 +231,7 @@ impl Rack {
             }
             let pos = remaining.iter().position(|r_tile| r_tile == tile);
             let some_pos = pos.ok_or(RummikubError)?;
+            // TODO this has got to be the problem? It doesn't preserve ordering?
             remaining.swap_remove(some_pos);
         }
         remaining.sort();
@@ -316,7 +318,7 @@ mod basic_tests {
             RegularTile(Color::Black, Number::Six),
             RegularTile(Color::Black, Number::Seven),
         ];
-        let simple_run = Run::parse(simple_run_vec.clone()).unwrap();
+        let simple_run = Run::parse(&simple_run_vec).unwrap();
         let some_rack = object_mother_some_rack();
         let result: Result<Rack, RummikubError> = some_rack.remove(&simple_run);
         assert!(result.is_ok());

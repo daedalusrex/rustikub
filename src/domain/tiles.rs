@@ -9,6 +9,7 @@ use colored::Colorize;
 use number::Number;
 use rand::seq::IteratorRandom;
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use strum::IntoEnumIterator;
 use Tile::{JokersWild, RegularTile};
@@ -55,10 +56,16 @@ pub fn only_regular_tiles(tiles: &Vec<Tile>) -> TileSequence {
         .collect();
 }
 
+pub fn unique_colors(tiles: &TileSequence) -> HashSet<Color> {
+    // WOW filter_map is awesome
+    // -> https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter_map
+    return tiles.iter().filter_map(|t| t.get_color()).collect();
+}
+
 // Just for testing out type aliases
 // https://doc.rust-lang.org/beta/reference/items/type-aliases.html
 /// An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
-type TileSequence = Vec<Tile>;
+pub type TileSequence = Vec<Tile>;
 
 pub fn list_all_subsequences<T>(seq: &Vec<T>) -> Vec<Vec<T>>
 where
@@ -90,7 +97,7 @@ pub fn highest_value_collection<'a, T: Decompose>(collections: &'a mut Vec<&T>) 
     collections.last().copied()
 
     // TODO the idiomatic way which require Ord for (ScoreValue, &T)
-    // TODO How to implement traits for "adhoc" tuples? (maybe make them a type...)
+    // How to implement traits for "adhoc" tuples? -> Automatically present of Ord is on each item in the tuple
     // let max_value = sequences
     //     .iter()
     //     .map(|&col| (ScoreValue::add_em_up(&col.decompose()), col))
@@ -131,6 +138,22 @@ impl Tile {
         }
     }
 
+    /// Gets the color if it's a regular tile, Jokers have no color
+    pub fn get_color(&self) -> Option<Color> {
+        match self {
+            JokersWild => None,
+            RegularTile(col, _) => Some(*col),
+        }
+    }
+
+    /// Gets the color if it's a regular tile, Jokers have no number
+    pub fn get_number(&self) -> Option<Number> {
+        match self {
+            JokersWild => None,
+            RegularTile(_, num) => Some(*num),
+        }
+    }
+
     pub fn is_number(&self, num: &Number) -> bool {
         match self {
             JokersWild => false,
@@ -152,17 +175,18 @@ impl Tile {
 
 #[cfg(test)]
 mod tile_tests {
-    use super::{highest_value_collection, list_all_subsequences, Tile};
+    use super::{highest_value_collection, list_all_subsequences, unique_colors, Tile};
     use crate::domain::score_value::ScoreValue;
     use crate::domain::sets::group::Group;
     use crate::domain::tiles::color::Color;
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number;
     use crate::domain::tiles::number::Number::*;
-    use crate::domain::tiles::Tile::RegularTile;
+    use crate::domain::tiles::Tile::{JokersWild, RegularTile};
     use crate::domain::Decompose;
     use colored::Colorize;
     use std::cmp::Ordering;
+    use std::collections::HashSet;
     use strum::{EnumCount, IntoEnumIterator};
 
     #[test]
@@ -331,5 +355,34 @@ mod tile_tests {
 
         foobar.sort_by(my_clos);
         println!("foobar {:?}", foobar)
+    }
+
+    #[test]
+    fn test_unique_colors_happy_path() {
+        let two_tiles = vec![
+            RegularTile(Red, One),
+            RegularTile(Blue, Twelve),
+            RegularTile(Blue, One),
+        ];
+        let actual = unique_colors(&two_tiles);
+        let mut expected: HashSet<Color> = HashSet::new();
+        expected.insert(Red);
+        expected.insert(Blue);
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_unique_colors_jokers() {
+        let two_tiles = vec![
+            JokersWild,
+            RegularTile(Red, One),
+            JokersWild,
+            RegularTile(Blue, Twelve),
+        ];
+        let actual = unique_colors(&two_tiles);
+        let mut expected: HashSet<Color> = HashSet::new();
+        expected.insert(Red);
+        expected.insert(Blue);
+        assert_eq!(actual, expected)
     }
 }

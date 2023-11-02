@@ -2,6 +2,9 @@ use crate::domain::tiles::Tile;
 use std::fmt;
 use std::fmt::Formatter;
 
+// u16, because max theoretical ScoreValue of all tiles (i.e. the Boneyard) is
+// ((13*14)/2 * 4 + 60 = 424, which is > u8::MAX (255)
+
 #[derive(Debug, PartialEq, Ord, Eq, PartialOrd, Copy, Clone)]
 pub struct ScoreValue {
     total: u16,
@@ -9,8 +12,8 @@ pub struct ScoreValue {
 
 impl ScoreValue {
     /// Creates an arbitrary score value from the provided integer
-    pub const fn of(val: u8) -> ScoreValue {
-        ScoreValue { total: val as u16 }
+    pub const fn of(val: u16) -> ScoreValue {
+        ScoreValue { total: val }
     }
 
     /// Adds a sequence of tiles for their face value. In this abstract case, Jokers are worth 30 pts, as they
@@ -41,10 +44,10 @@ impl std::ops::Add<ScoreValue> for ScoreValue {
     }
 }
 
-impl std::ops::Mul<u8> for ScoreValue {
+impl std::ops::Mul<u16> for ScoreValue {
     type Output = ScoreValue;
-    fn mul(self, rhs: u8) -> Self::Output {
-        let total = self.total * rhs as u16;
+    fn mul(self, rhs: u16) -> Self::Output {
+        let total = self.total * rhs;
         ScoreValue { total }
     }
 }

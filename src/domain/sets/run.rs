@@ -3,8 +3,8 @@ use super::ParseError::*;
 use crate::domain::score_value::ScoreValue;
 use crate::domain::tiles::color::Color;
 use crate::domain::tiles::number::Number;
-use crate::domain::tiles::Tile;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
+use crate::domain::tiles::{only_regular_tiles, unique_colors, Tile, TileSequence};
 use crate::domain::Decompose;
 use std::collections::HashSet;
 use std::vec;
@@ -26,8 +26,8 @@ pub struct Run {
 
 impl Run {
     /// Creates a run based on defining parameters as given in constructor
-    pub fn of(start: Number, color: Color, len: u8) -> Option<Run> {
-        if len < MIN_RUN_SIZE as u8 {
+    pub fn of(start: Number, color: Color, len: u16) -> Option<Run> {
+        if len < MIN_RUN_SIZE as u16 {
             return None;
         }
         let start_val = start.as_value();
@@ -36,7 +36,7 @@ impl Run {
         }
         let mut end = start;
         for _ in 0..len {
-            end = end.next();
+            end = end.next()?
         }
         Some(Run {
             start,
@@ -46,101 +46,61 @@ impl Run {
         })
     }
 
-    // Using the Result<T, E> type instead of Option here. It's better suited for this? than Option
-    //  https://doc.rust-lang.org/rust-by-example/error/result.html
-    // TODO this should be &Vec<Tile>, a reference instead of a borrow
-    // TODO This should totally be an option? Many tiles are not Runs? -> The error is nice to have I guess ???
-    // TODO Honestly, just rewrite this from scratch. I Suppose I don't shuffle them right? I expect it to be ordered already?? Could sort pretty easily...
-    pub fn parse(candidates: Vec<Tile>) -> Result<Run, ParseError> {
-        if candidates.len() < MIN_RUN_SIZE {
-            return Err(TooFewTiles);
-        }
-        if candidates.len() > MAX_RUN_SIZE {
-            return Err(TooManyTiles);
+    /// Parses a reference to an immutable vector of tiles, i.e. TileSequence, and check it it is
+    /// a valid run, based on the rules of Rummikub. If it is create the run, and return it
+    /// otherwise returns None.
+    /// This assumes the order given is the order intended, and does not try any other permutations
+    /// or orderings. It also assumes the Jokers are not intended to be moved around.
+    pub fn parse(candidates: &TileSequence) -> Option<Run> {
+        if candidates.len() < MIN_RUN_SIZE || candidates.len() > MAX_RUN_SIZE {
+            return None;
         }
 
+        let color_set = unique_colors(candidates);
+        // No Colors, or more than one distinct color
+        if color_set.len() != 1 {
+            return None;
+        }
+        let color = *color_set.iter().next()?;
+
+        let joker_count = candidates.iter().filter(|t| t.is_joker()).count();
+        if joker_count > MAX_JOKERS_IN_RUN {
+            return None;
+        }
+
+        // Ignoring jokers what is the first number in the candidates
+        let first: Number = candidates.iter().filter_map(|t| t.get_number()).next()?;
+        // Let's assume that the first tile in the candidates is a regular tile
+        let mut start: Number = first;
+
+        // Find that regular number's location in the candidates, anything other than 0 must be jokers
+        let first_position = candidates.iter().position(|t| t.is_number(&first))?;
+        // If we have joker(s) in front, we need to begin our hypothetical run
+        // at the number that the joke(r) represents
+        for i in 0..first_position {
+            start = start.prev()? // If there is no previous than it's not a valid sequence
+        }
+
+        let mut expected_current: Option<Number> = Some(start);
         let mut jokers: HashSet<Number> = HashSet::new();
-        let mut end = Number::One;
-        let mut start = Number::Thirteen;
-        let mut color = Color::Red;
-        let mut prepend_joker_count = 0;
-        let mut first_definitive_cn: Option<Number> = None;
-        let mut previous = Number::Thirteen;
-
-        // TODO Alternate approach, acquire the index, and do prepend based on that -> hmm
-        // candidates.iter().enumerate().filter()
-        // let mut iter_of_only_regular = candidates.iter().filter(|tile| !tile.is_joker());
-        // let first_no_joke = iter_of_only_regular.next().ok_or(IllegalJokers);
-
-        // closure logic checks
-        // TODO man I have no idea what you were doing here but it's not correct, why not just compare tiles?
-        // TODO, I think this closure should be -> tiles can be adjaacent?
-        let validate_sequence_with_next =
-            |next: &Tile, prev: Number, possible_color: Color| -> Result<Number, ParseError> {
-                if prev == Number::Thirteen {
-                    return Err(OutOfBounds);
-                }
-                if next.is_joker() && prev < Number::Thirteen {
-                    return Ok(prev.next());
-                }
-                if next.is_number(&prev) {
-                    return Err(DuplicateNumbers);
-                }
-                if !next.is_number(&prev.next()) {
-                    return Err(OutOfOrder);
-                }
-                if !next.is_color(&possible_color) {
-                    return Err(DistinctColors);
-                }
-                Ok(prev.next())
-            };
-
-        // Go through the vector and check the constraints
-        for (idx, tile) in candidates.iter().enumerate() {
+        let mut end: Number = start;
+        for tile in candidates {
+            let expected = expected_current?;
             match tile {
-                JokersWild => match first_definitive_cn {
-                    // TODO this is definitely wrong if you start with a Joker, which is totally valid
-                    Some(first_cn) => {
-                        let next = validate_sequence_with_next(tile, previous, color)?;
-                        jokers.insert(next);
-                        end = next;
-                        previous = next;
-                    }
-                    None => prepend_joker_count += 1,
-                },
-                RegularTile(regular_color, regular_number) => {
-                    match first_definitive_cn {
-                        Some(first_cn) => {
-                            let next = validate_sequence_with_next(tile, previous, color)?;
-                            end = next; // Keep incrementing the newly found end representation
-                            previous = *regular_number; // TODO what does derefrence do for copy?
-                        }
-                        None => {
-                            // Only happens once, when we first encounter a regular tile
-                            first_definitive_cn = Some(regular_number.clone());
-                            start = regular_number.clone();
-                            color = regular_color.clone();
-                            previous = regular_number.clone(); // Is this a move or a copy?
-                        }
+                JokersWild => {
+                    jokers.insert(expected);
+                }
+                RegularTile(_, num) => {
+                    if *num != expected {
+                        return None;
                     }
                 }
             }
+            end = expected;
+            expected_current = expected.next();
         }
 
-        for i in 0..prepend_joker_count {
-            if start == Number::One {
-                return Err(IllegalJokers);
-            }
-
-            start = start.prev();
-            jokers.insert(start);
-        }
-
-        if jokers.len() > MAX_JOKERS_IN_RUN {
-            return Err(IllegalJokers);
-        }
-
-        Ok(Run {
+        Some(Run {
             start,
             end,
             color,
@@ -157,13 +117,9 @@ impl Run {
     }
 
     pub fn total_value(&self) -> ScoreValue {
-        let mut score_sum = ScoreValue::of(0);
-        let mut current = self.start;
-        while current <= self.end {
-            score_sum = score_sum + current.as_value();
-            current = current.next();
-        }
-        score_sum
+        let rot = self.decompose(); // Because rot is what happens when you decompose lol
+                                    // TODO double check rules, but apparently the test thinks jokers count as the value they show
+        ScoreValue::add_em_up(&rot)
     }
 
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
@@ -178,10 +134,10 @@ impl Run {
                 if self.start == Number::One {
                     None // Ridiculous but possible edge case
                 } else {
-                    Some(self.start.prev())
+                    Some(self.start.prev()?)
                 }
             } else {
-                Some(self.end.next())
+                Some(self.end.next()?)
             };
         };
 
@@ -189,8 +145,18 @@ impl Run {
             match num {
                 None => false,
                 Some(num) => {
-                    return (num != &self.end && num != &self.start)
-                        && (num == &self.end.next() || num == &self.start.prev())
+                    let success;
+                    let condition_one = num != &self.end && num != &self.start;
+                    let mut condition_two_or1: bool = false;
+                    if let Some(next_num) = &self.end.next() {
+                        condition_two_or1 = num == next_num
+                    }
+                    let mut condition_two_or2: bool = false;
+                    if let Some(prev_num) = &self.start.prev() {
+                        condition_two_or2 = prev_num == num;
+                    }
+                    success = condition_one && (condition_two_or1 || condition_two_or2);
+                    return success;
                 }
             }
         };
@@ -261,13 +227,18 @@ impl Decompose for Run {
     fn decompose(&self) -> Vec<Tile> {
         let mut current = self.start;
         let mut tiles: Vec<Tile> = vec![];
-        while current <= self.end {
+        while current < self.end {
             if self.jokers.contains(&current) {
                 tiles.push(JokersWild);
             } else {
                 tiles.push(RegularTile(self.color, current));
             }
-            current = current.next();
+            current = current.next().expect("IMPOSSIBLE RUN DEFINITION");
+        }
+        if self.jokers.contains(&self.end) {
+            tiles.push(JokersWild);
+        } else {
+            tiles.push(RegularTile(self.color, self.end));
         }
         tiles
     }
@@ -292,8 +263,8 @@ mod run_parsing {
         }
         vec![
             RegularTile(color, first),
-            RegularTile(color, first.next()),
-            RegularTile(color, first.next().next()),
+            RegularTile(color, first.next().expect("BOOM")),
+            RegularTile(color, first.next().expect("BOOM").next().expect("BOOM")),
         ]
     }
 
@@ -302,8 +273,8 @@ mod run_parsing {
         let happy = object_mother_good_run_of_three();
         let first_tile = happy.first().unwrap().clone();
         if let RegularTile(color, num) = first_tile {
-            let result = Run::parse(happy);
-            assert!(result.is_ok());
+            let result = Run::parse(&happy);
+            assert!(result.is_some());
             let success = result.expect("BROKEN");
             assert_eq!(success.start, num);
             assert_eq!(success.color, color);
@@ -320,16 +291,16 @@ mod run_parsing {
         let second = RegularTile(color, Four);
         let third = RegularTile(color, Five);
         let okay1 = vec![first, second, third, JokersWild];
-        assert!(Run::parse(okay1.clone()).is_ok());
+        assert!(Run::parse(&okay1.clone()).is_some());
         let okay2 = vec![JokersWild, first, second, third];
-        assert!(Run::parse(okay2.clone()).is_ok());
-        assert_eq!(okay2, Run::parse(okay2.clone()).unwrap().decompose());
+        assert!(Run::parse(&okay2.clone()).is_some());
+        assert_eq!(okay2, Run::parse(&okay2.clone()).unwrap().decompose());
         let okay3 = vec![JokersWild, JokersWild, first, second, third];
-        assert!(Run::parse(okay3.clone()).is_ok());
-        assert_eq!(okay3, Run::parse(okay3.clone()).unwrap().decompose());
+        assert!(Run::parse(&okay3.clone()).is_some());
+        assert_eq!(okay3, Run::parse(&okay3.clone()).unwrap().decompose());
         let okay4 = vec![first, second, third, JokersWild, JokersWild];
-        assert!(Run::parse(okay4.clone()).is_ok());
-        assert_eq!(okay4, Run::parse(okay4.clone()).unwrap().decompose());
+        assert!(Run::parse(&okay4.clone()).is_some());
+        assert_eq!(okay4, Run::parse(&okay4.clone()).unwrap().decompose());
     }
 
     #[test]
@@ -339,7 +310,7 @@ mod run_parsing {
         let second = RegularTile(color, Four);
         let third = RegularTile(color, Five);
         let too_many = vec![first, second, third, JokersWild, JokersWild, JokersWild];
-        assert!(Run::parse(too_many.clone()).is_err());
+        assert!(Run::parse(&too_many.clone()).is_none());
     }
 
     #[test]
@@ -349,14 +320,14 @@ mod run_parsing {
         let second = RegularTile(color, Four);
         let third = RegularTile(color, Five);
         let success = vec![first, second, third, JokersWild];
-        assert!(Run::parse(success.clone()).is_err());
+        assert!(Run::parse(&success.clone()).is_some());
 
         let color = Color::get_rand();
         let first = RegularTile(color, Three);
         let second = RegularTile(color, Four);
         let third = RegularTile(color, Five);
         let success = vec![JokersWild, first, second, third];
-        assert!(Run::parse(success.clone()).is_err());
+        assert!(Run::parse(&success.clone()).is_some());
     }
 
     #[test]
@@ -367,16 +338,16 @@ mod run_parsing {
             //too few
             let mut too_few = happy.clone();
             too_few.pop();
-            assert!(Run::parse(too_few.clone()).is_err());
+            assert!(Run::parse(&too_few.clone()).is_none());
             // Can also Specify Error Type
-            assert_eq!(Err(TooFewTiles), Run::parse(too_few));
+            assert_eq!(None, Run::parse(&too_few));
 
             //too many
             let mut too_many = happy.clone();
             for num in Number::iter() {
                 too_many.push(RegularTile(color, num));
             }
-            assert!(Run::parse(too_many).is_err());
+            assert!(Run::parse(&too_many).is_none());
         } else {
             assert!(false)
         }
@@ -387,8 +358,8 @@ mod run_parsing {
         let mut distinct_colors = object_mother_good_run_of_three();
         let first_tile = distinct_colors.first().unwrap().clone();
         if let RegularTile(color, num) = first_tile {
-            distinct_colors.push(RegularTile(color.next(), num.prev()));
-            assert!(Run::parse(distinct_colors).is_err());
+            distinct_colors.push(RegularTile(color.next(), num.prev().expect("BOOM")));
+            assert!(Run::parse(&distinct_colors).is_none());
         } else {
             assert!(false)
         }
@@ -400,7 +371,7 @@ mod run_parsing {
         let first_tile = dupped.first().unwrap().clone();
         if let RegularTile(color, num) = first_tile {
             dupped.push(first_tile.clone());
-            assert!(Run::parse(dupped).is_err());
+            assert!(Run::parse(&dupped).is_none());
         } else {
             assert!(false)
         }
@@ -410,7 +381,7 @@ mod run_parsing {
     fn rejects_reversed_ordering() {
         let mut reversed = object_mother_good_run_of_three();
         reversed.reverse();
-        assert!(Run::parse(reversed).is_err());
+        assert!(Run::parse(&reversed).is_none());
     }
 
     #[test]
@@ -420,7 +391,7 @@ mod run_parsing {
         let second = RegularTile(color, Thirteen);
         let third = RegularTile(color, One);
         let end_at_13: Vec<Tile> = vec![first, second, third];
-        assert!(Run::parse(end_at_13).is_err());
+        assert!(Run::parse(&end_at_13).is_none());
     }
 
     /// Could accidentally pass sometimes if random ordering is actually correct
@@ -432,7 +403,7 @@ mod run_parsing {
         let second = RegularTile(color, Number::get_rand());
         let third = RegularTile(color, Number::get_rand());
         let random_order: Vec<Tile> = vec![first, second, third];
-        assert!(Run::parse(random_order).is_err());
+        assert!(Run::parse(&random_order).is_none());
     }
 
     #[test]
@@ -443,11 +414,11 @@ mod run_parsing {
         let third = RegularTile(color, Seven);
 
         let actual_sum = ScoreValue::of(5 + 6 + 7);
-        let known_run = Run::parse(vec![first, second, third]).expect("BROKEN");
+        let known_run = Run::parse(&vec![first, second, third]).expect("BROKEN");
         assert_eq!(known_run.total_value(), known_run.total_value());
 
         let actual_sum_with_joker = ScoreValue::of(5 + 6 + 7 + 8);
-        let with_joker = Run::parse(vec![first, second, third, JokersWild]).expect("BROKEN");
+        let with_joker = Run::parse(&vec![first, second, third, JokersWild]).expect("BROKEN");
         assert_eq!(actual_sum_with_joker, with_joker.total_value());
     }
 }
@@ -460,26 +431,26 @@ mod other_tests_of_runs {
     use crate::domain::tiles::number::Number::*;
     use crate::domain::tiles::Tile::RegularTile;
 
-    fn good_run() -> (Vec<Tile>, Run) {
+    fn good_run_red_678() -> (Vec<Tile>, Run) {
         let original = vec![
             RegularTile(Red, Six),
             RegularTile(Red, Seven),
             RegularTile(Red, Eight),
         ];
-        let run = Run::parse(original.clone()).unwrap();
+        let run = Run::parse(&original.clone()).unwrap();
         (original.clone(), run.clone())
     }
 
     #[test]
     fn decomposition_matches() {
-        let (origin, run) = good_run();
+        let (origin, run) = good_run_red_678();
         let rot = run.decompose();
         assert_eq!(origin, rot)
     }
 
     #[test]
     fn contains_correct() {
-        let (origin, run) = good_run();
+        let (origin, run) = good_run_red_678();
         for item in origin {
             if let RegularTile(c, n) = item {
                 assert!(run.contains(n))
@@ -491,7 +462,7 @@ mod other_tests_of_runs {
 
     #[test]
     fn add_tile_happy_path() {
-        let (origin, run) = good_run();
+        let (origin, run) = good_run_red_678();
         let origin_tile = origin.last().expect("BROKEN");
         if let RegularTile(color, num) = origin_tile {
             if num == &Thirteen {
@@ -499,18 +470,18 @@ mod other_tests_of_runs {
                 return;
             }
 
-            let new_tile = RegularTile(color.clone(), num.clone());
+            let new_tile = RegularTile(*color, num.next().expect("BROKEN TEST"));
             let result = run.add_tile(&new_tile, None);
             assert!(result.is_some());
             let mut origin_plus = origin.clone();
             origin_plus.push(new_tile);
-            assert_eq!(result, Run::parse(origin_plus).ok());
+            assert_eq!(result, Run::parse(&origin_plus));
 
             let run_plus_joke = run.add_tile(&JokersWild, None);
             assert!(run_plus_joke.is_some());
             let mut origin_joke = origin.clone();
             origin_joke.push(JokersWild);
-            assert_eq!(run_plus_joke, Run::parse(origin_joke).ok())
+            assert_eq!(run_plus_joke, Run::parse(&origin_joke))
         } else {
             assert!(false)
         }

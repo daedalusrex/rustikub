@@ -101,7 +101,7 @@ impl Group {
 
     pub fn total_value(&self) -> ScoreValue {
         let one_num = self.num.as_value();
-        one_num * (self.jokers + self.colors.len() as u8)
+        one_num * (self.jokers as u16 + self.colors.len() as u16)
     }
 
     pub fn add_tile(&self, tile: &Tile) -> Option<Group> {
