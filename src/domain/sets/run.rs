@@ -227,18 +227,21 @@ impl Decompose for Run {
     fn decompose(&self) -> Vec<Tile> {
         let mut current = self.start;
         let mut tiles: Vec<Tile> = vec![];
-        while current < self.end {
+        loop {
             if self.jokers.contains(&current) {
                 tiles.push(JokersWild);
             } else {
                 tiles.push(RegularTile(self.color, current));
             }
-            current = current.next().expect("IMPOSSIBLE RUN DEFINITION");
-        }
-        if self.jokers.contains(&self.end) {
-            tiles.push(JokersWild);
-        } else {
-            tiles.push(RegularTile(self.color, self.end));
+
+            if let Some(next) = current.next() {
+                current = next;
+            } else {
+                break;
+            }
+            if current > self.end {
+                break;
+            }
         }
         tiles
     }
@@ -484,6 +487,32 @@ mod other_tests_of_runs {
             assert_eq!(run_plus_joke, Run::parse(&origin_joke))
         } else {
             assert!(false)
+        }
+    }
+
+    #[test]
+    fn known_infinite_loop_edge_case() {
+        use std::thread;
+        use std::time::{Duration, Instant};
+        use Color::*;
+        let special_case: Vec<Tile> = vec![
+            RegularTile(Black, Eleven),
+            RegularTile(Black, Twelve),
+            RegularTile(Black, Thirteen),
+        ];
+
+        let thread_handle = thread::spawn(move || {
+            let result = Run::parse(&special_case);
+            assert!(result.is_some());
+            let rotten = result.unwrap().decompose(); // The infinite loop was in decompose
+            assert_eq!(rotten.len(), 3);
+        });
+
+        thread::sleep(Duration::from_millis(10));
+        if !thread_handle.is_finished() {
+            // The test should finish nearly instantly in sub-milliseconds so waiting
+            // this long indicates it's stuck in an infinite loop
+            panic!("Parse test took way too long! There must be an infinite loop!")
         }
     }
 }
