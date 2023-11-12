@@ -116,10 +116,16 @@ impl Run {
         self.color
     }
 
+    /// According to the rules, jokers score the value of the tile it represents (for initial meld)
+    /// For Points at the end of the game (i.e. just on the rack, it is 30.)
     pub fn total_value(&self) -> ScoreValue {
-        let rot = self.decompose(); // Because rot is what happens when you decompose lol
-                                    // TODO double check rules, but apparently the test thinks jokers count as the value they show
-        ScoreValue::add_em_up(&rot)
+        let mut current = Some(self.start);
+        let mut sum: ScoreValue = ScoreValue::of(0);
+        while current.is_some() && current.unwrap() <= self.end {
+            sum += current.unwrap().as_value();
+            current = current.unwrap().next();
+        }
+        sum
     }
 
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
@@ -225,23 +231,17 @@ impl Run {
 
 impl Decompose for Run {
     fn decompose(&self) -> Vec<Tile> {
-        let mut current = self.start;
+        let mut current = Some(self.start);
         let mut tiles: Vec<Tile> = vec![];
-        loop {
-            if self.jokers.contains(&current) {
+
+        while current.is_some() && current.unwrap() <= self.end {
+            let num = current.unwrap();
+            if self.jokers.contains(&num) {
                 tiles.push(JokersWild);
             } else {
-                tiles.push(RegularTile(self.color, current));
+                tiles.push(RegularTile(self.color, num));
             }
-
-            if let Some(next) = current.next() {
-                current = next;
-            } else {
-                break;
-            }
-            if current > self.end {
-                break;
-            }
+            current = current.unwrap().next();
         }
         tiles
     }

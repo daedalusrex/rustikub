@@ -178,6 +178,7 @@ impl Rack {
 
             // TODO This is likely not a comprehensive way to find all possible ordered subsets
             // TODO this is where to replace with the newly created all sub-sets thing
+            // TODO USE list_all_subsequences here!
             let mut from_left = all_with_color.clone();
             let mut from_right = all_with_color.clone();
             let mut walk_inwards = all_with_color.clone();
@@ -276,6 +277,7 @@ impl Rack {
 #[cfg(test)]
 mod basic_tests {
     use crate::domain::player::rack::Rack;
+    use crate::domain::score_value::ScoreValue;
     use crate::domain::sets::group::Group;
     use crate::domain::sets::run::Run;
     use crate::domain::sets::Set;
@@ -403,5 +405,22 @@ mod basic_tests {
                 Set::Group(other_group)
             ]
         );
+    }
+
+    /// The score value of the rack is the value at the end of the game
+    /// i.e. Jokers have a value of 30 pts, since they don't represent anything
+    #[test]
+    pub fn total_value_on_rack() {
+        let foo = Rack {
+            rack: vec![
+                JokersWild,
+                RegularTile(Color::Black, Number::Five),
+                RegularTile(Color::Black, Number::Six),
+                RegularTile(Color::Black, Number::Seven),
+            ],
+            played_initial_meld: false,
+        };
+        let expected_score: ScoreValue = ScoreValue::of(30 + 5 + 6 + 7);
+        assert_eq!(expected_score, foo.total_value())
     }
 }
