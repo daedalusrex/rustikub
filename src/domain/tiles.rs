@@ -64,6 +64,8 @@ pub fn unique_colors(tiles: &TileSequence) -> HashSet<Color> {
 
 // Just for testing out type aliases
 // https://doc.rust-lang.org/beta/reference/items/type-aliases.html
+// TODO Consider an alternative implementation using the "New Type Idiom"
+// https://doc.rust-lang.org/rust-by-example/generics/new_types.html
 /// An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
 pub type TileSequence = Vec<Tile>;
 

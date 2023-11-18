@@ -15,7 +15,9 @@ use crate::domain::table::face_up::FaceUpTiles;
 use crate::domain::tiles::color::Color;
 use crate::domain::tiles::number::Number;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-use crate::domain::tiles::{only_regular_tiles, Tile};
+use crate::domain::tiles::{
+    highest_value_collection, list_all_subsequences, only_regular_tiles, Tile, TileSequence,
+};
 use crate::domain::{Decompose, RummikubError};
 
 const INITIAL_TILES: u8 = 14;
@@ -163,57 +165,61 @@ impl Rack {
         reg_tiles.sort();
         reg_tiles.dedup();
         for color in Color::iter() {
-            let all_with_color: Vec<Tile> = reg_tiles
+            let all_with_color: TileSequence = reg_tiles
                 .iter()
-                .filter(|t| match t {
-                    RegularTile(c, n) => c == &color,
-                    _ => false,
+                .filter_map(|t| {
+                    if t.is_color(&color) {
+                        return Some(t.clone());
+                    }
+                    None
                 })
-                .map(|t| t.clone())
                 .collect();
 
             // Tiles can't be used multiple times in different runs (at least in this simple implementation)
             // So if found any run for a particular color, just stop
             let mut found_at_least_one_for_this_color = false;
 
+            // TODO USE list_all_subsequences here!
+            let mut foo = list_all_subsequences(&all_with_color);
+            // let bar = highest_value_collection(&mut foo);
+
             // TODO This is likely not a comprehensive way to find all possible ordered subsets
             // TODO this is where to replace with the newly created all sub-sets thing
-            // TODO USE list_all_subsequences here!
-            let mut from_left = all_with_color.clone();
-            let mut from_right = all_with_color.clone();
-            let mut walk_inwards = all_with_color.clone();
-
-            while from_right.len() > 0 && !found_at_least_one_for_this_color {
-                if let Some(found) = Run::parse(&from_right) {
-                    runs.push(found);
-                    found_at_least_one_for_this_color = true;
-                }
-                from_right.pop();
-            }
-
-            while from_left.len() > 0 && !found_at_least_one_for_this_color {
-                if let Some(found) = Run::parse(&from_left) {
-                    runs.push(found);
-                    found_at_least_one_for_this_color = true;
-                }
-                from_left.remove(0);
-            }
-
-            let mut left_or_right = false;
-            while walk_inwards.len() > 0 && !found_at_least_one_for_this_color {
-                // Consider changing this to a closure
-                if let Some(found) = Run::parse(&walk_inwards) {
-                    runs.push(found);
-                    found_at_least_one_for_this_color = true;
-                }
-                if left_or_right {
-                    walk_inwards.remove(0);
-                    left_or_right = true;
-                } else {
-                    walk_inwards.pop();
-                    left_or_right = false;
-                }
-            }
+            // let mut from_left = all_with_color.clone();
+            // let mut from_right = all_with_color.clone();
+            // let mut walk_inwards = all_with_color.clone();
+            //
+            // while from_right.len() > 0 && !found_at_least_one_for_this_color {
+            //     if let Some(found) = Run::parse(&from_right) {
+            //         runs.push(found);
+            //         found_at_least_one_for_this_color = true;
+            //     }
+            //     from_right.pop();
+            // }
+            //
+            // while from_left.len() > 0 && !found_at_least_one_for_this_color {
+            //     if let Some(found) = Run::parse(&from_left) {
+            //         runs.push(found);
+            //         found_at_least_one_for_this_color = true;
+            //     }
+            //     from_left.remove(0);
+            // }
+            //
+            // let mut left_or_right = false;
+            // while walk_inwards.len() > 0 && !found_at_least_one_for_this_color {
+            //     // Consider changing this to a closure
+            //     if let Some(found) = Run::parse(&walk_inwards) {
+            //         runs.push(found);
+            //         found_at_least_one_for_this_color = true;
+            //     }
+            //     if left_or_right {
+            //         walk_inwards.remove(0);
+            //         left_or_right = true;
+            //     } else {
+            //         walk_inwards.pop();
+            //         left_or_right = false;
+            //     }
+            // }
         }
         runs
     }
