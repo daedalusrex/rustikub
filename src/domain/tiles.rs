@@ -64,11 +64,29 @@ pub fn unique_colors(tiles: &TileSequence) -> HashSet<Color> {
 
 // Just for testing out type aliases
 // https://doc.rust-lang.org/beta/reference/items/type-aliases.html
-// TODO Consider an alternative implementation using the "New Type Idiom"
-// https://doc.rust-lang.org/rust-by-example/generics/new_types.html
-/// An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
+/// TYPE ALIAS: An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
 pub type TileSequence = Vec<Tile>;
 
+impl Decompose for TileSequence {
+    fn decompose(&self) -> TileSequence {
+        return self.clone();
+    }
+}
+
+// An alternative implementation using the "New Type Idiom"
+// https://doc.rust-lang.org/rust-by-example/generics/new_types.html
+/// NEWTYPE: An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
+pub struct TileSequenceType(Vec<Tile>);
+
+impl Decompose for TileSequenceType {
+    fn decompose(&self) -> TileSequence {
+        return self.0.decompose();
+    }
+}
+
+/// Provides a sequence of all possible ordered sub-sequences of an array
+/// Given 1,2 -> [(1), (1,2), (2)]
+/// implemented using a sliding window, does not filter
 pub fn list_all_subsequences<T>(seq: &Vec<T>) -> Vec<Vec<T>>
 where
     T: Clone,
@@ -83,7 +101,7 @@ where
     return subsequences;
 }
 
-fn ordering_closure<T: Decompose>(_self: &&T, _other: &&T) -> Ordering {
+fn ordering_closure<T: Decompose>(_self: &T, _other: &T) -> Ordering {
     // I don't know what && means, but ChatGPT says it works so....
     let self_score = ScoreValue::add_em_up(&_self.decompose());
     let other_score = ScoreValue::add_em_up(&_other.decompose());
@@ -93,10 +111,10 @@ fn ordering_closure<T: Decompose>(_self: &&T, _other: &&T) -> Ordering {
 /// Ranks a given set of Tile Sequences (or what have you) by their Scores
 /// Highest Value is first.
 /// TODO probably a way to do this by implementing the partial order trait and breaking this up...
-pub fn highest_value_collection<'a, T: Decompose>(collections: &'a mut Vec<&T>) -> Option<&'a T> {
+pub fn highest_value_collection<T: Decompose>(collections: &mut Vec<T>) -> Option<&T> {
     // An inner function, No need for a closure since it doesn't use anything in the outer scope
     collections.sort_by(ordering_closure);
-    collections.last().copied()
+    collections.last()
 
     // TODO the idiomatic way which require Ord for (ScoreValue, &T)
     // How to implement traits for "adhoc" tuples? -> Automatically present of Ord is on each item in the tuple

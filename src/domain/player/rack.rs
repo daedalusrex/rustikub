@@ -181,7 +181,19 @@ impl Rack {
 
             // TODO USE list_all_subsequences here!
             let mut foo = list_all_subsequences(&all_with_color);
-            // let bar = highest_value_collection(&mut foo);
+            println!("AllCollections {:?}", foo);
+            /*
+               TODO Next steps here, (WHICH I HAVE FORGOTTEN),
+               Have all subsequences
+               Need to filter sub-sequences for valid runs. (using Run::parse?)
+                   Insert Joker Logic here eventually.
+               ?Choose Highest of all the runs (using highest_value) (? but I want mulitple?)
+               ? maybe re-write the caller of this one, to just extract one and then try this again
+               ? also tests
+
+            */
+            let bar = highest_value_collection(&mut foo);
+            println!("\nHighest Collection {:?}", bar)
 
             // TODO This is likely not a comprehensive way to find all possible ordered subsets
             // TODO this is where to replace with the newly created all sub-sets thing
