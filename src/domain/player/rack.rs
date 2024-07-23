@@ -110,12 +110,16 @@ impl Rack {
     pub fn sets_on_rack(&self) -> Option<(Vec<Set>, Rack)> {
         let mut sets: Vec<Set> = vec![];
         let mut new_rack = self.clone();
-        for r in self.runs_on_rack() {
-            sets.push(Set::Run(r.clone()));
+
+        let mut optional_run = self.get_largest_run();
+        while let Some(ref largest_run) = optional_run {
             new_rack = new_rack
-                .remove(&r)
-                .expect("Unable to remove set from rack, which claims it exists!");
+                .remove(largest_run)
+                .expect("Must be able to remove the found run");
+            sets.push(Set::Run(largest_run.clone()));
+            optional_run = new_rack.get_largest_run();
         }
+
         let runless_rack = new_rack.clone();
         for g in runless_rack.groups_on_rack() {
             sets.push(Set::Group(g.clone()));
@@ -155,16 +159,16 @@ impl Rack {
         groups
     }
 
-    /// Returns all Runs that are possible to create simultaneously given tiles currently on the rack.
-    /// Multiple concurrent possible runs are not returned
-    /// TODO Current Implementation Ignores Jokers  -> VERY BAD
-    fn runs_on_rack(&self) -> Vec<Run> {
-        let mut runs: Vec<Run> = vec![];
-
+    /// Returns the run with the largest score value on the rack if it exists.
+    /// TODO Current Implementation Ignores Jokers  -> Fix will be to increase search space by inserting them
+    /// TODO Add Tests for this one
+    fn get_largest_run(&self) -> Option<Run> {
         let mut reg_tiles = only_regular_tiles(&self.rack); // TODO This will break something
         reg_tiles.sort();
         reg_tiles.dedup();
+        let mut runs: Vec<Option<Run>> = vec![];
         for color in Color::iter() {
+            // TODO Could make this little didy a Tile sequence filter function
             let all_with_color: TileSequence = reg_tiles
                 .iter()
                 .filter_map(|t| {
@@ -175,65 +179,19 @@ impl Rack {
                 })
                 .collect();
 
-            // Tiles can't be used multiple times in different runs (at least in this simple implementation)
-            // So if found any run for a particular color, just stop
-            let mut found_at_least_one_for_this_color = false;
+            let all_sequences = list_all_subsequences(&all_with_color);
+            // TODO insert however many jokers into each position for each sequence here
 
-            // TODO USE list_all_subsequences here!
-            let mut foo = list_all_subsequences(&all_with_color);
-            println!("AllCollections {:?}", foo);
-            /*
-               TODO Next steps here, (WHICH I HAVE FORGOTTEN),
-               Have all subsequences
-               Need to filter sub-sequences for valid runs. (using Run::parse?)
-                   Insert Joker Logic here eventually.
-               ?Choose Highest of all the runs (using highest_value) (? but I want mulitple?)
-               ? maybe re-write the caller of this one, to just extract one and then try this again
-               ? also tests
-
-            */
-            let bar = highest_value_collection(&mut foo);
-            println!("\nHighest Collection {:?}", bar)
-
-            // TODO This is likely not a comprehensive way to find all possible ordered subsets
-            // TODO this is where to replace with the newly created all sub-sets thing
-            // let mut from_left = all_with_color.clone();
-            // let mut from_right = all_with_color.clone();
-            // let mut walk_inwards = all_with_color.clone();
-            //
-            // while from_right.len() > 0 && !found_at_least_one_for_this_color {
-            //     if let Some(found) = Run::parse(&from_right) {
-            //         runs.push(found);
-            //         found_at_least_one_for_this_color = true;
-            //     }
-            //     from_right.pop();
-            // }
-            //
-            // while from_left.len() > 0 && !found_at_least_one_for_this_color {
-            //     if let Some(found) = Run::parse(&from_left) {
-            //         runs.push(found);
-            //         found_at_least_one_for_this_color = true;
-            //     }
-            //     from_left.remove(0);
-            // }
-            //
-            // let mut left_or_right = false;
-            // while walk_inwards.len() > 0 && !found_at_least_one_for_this_color {
-            //     // Consider changing this to a closure
-            //     if let Some(found) = Run::parse(&walk_inwards) {
-            //         runs.push(found);
-            //         found_at_least_one_for_this_color = true;
-            //     }
-            //     if left_or_right {
-            //         walk_inwards.remove(0);
-            //         left_or_right = true;
-            //     } else {
-            //         walk_inwards.pop();
-            //         left_or_right = false;
-            //     }
-            // }
+            // Parse all subsequences
+            let mut valid_runs: Vec<Run> = all_sequences.iter().filter_map(Run::parse).collect();
+            let largest_run = highest_value_collection(&mut valid_runs);
+            // println!("\nHighest Collection {:?}", largest_run)
+            runs.push(largest_run.and_then(|r| Some(r.clone())));
         }
-        runs
+        let mut binding = runs.iter().filter_map(|x| x.clone()).collect();
+        let largest_of_all = highest_value_collection(&mut binding);
+        println!("Largest of all: {:?}", largest_of_all);
+        return largest_of_all.and_then(|run| Some(run.clone()));
     }
 
     /// Removes the given vector of tiles from the rack and returns a new version
@@ -355,7 +313,7 @@ mod basic_tests {
             rack: tiles,
             played_initial_meld: false,
         };
-        let found_runs = test_rack.runs_on_rack();
+        let found_runs = test_rack.get_largest_run();
         let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap(); // TODO unwrap bad
                                                                              // Implicitly relies on sorting by color -> Shrugs
         assert_eq!(found_runs, vec![other_run.clone(), basic_run.clone()]);

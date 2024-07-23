@@ -335,7 +335,7 @@ mod tile_tests {
     #[test]
     fn rank_collections_correctly() {
         let base_case = RegularTile(Blue, One);
-        let mut base_vec = vec![&base_case];
+        let mut base_vec = vec![base_case];
         let actual = highest_value_collection(&mut base_vec);
         assert_eq!(Some(&base_case), actual);
         println!("actual: {:?}", actual);
@@ -346,7 +346,7 @@ mod tile_tests {
         // let wowza = highest_value_collection(real_case);
         let twos = Group::of(&Two, &vec![Red, Blue, Black]).expect("BROKEN");
         let fours = Group::of(&Four, &vec![Red, Blue, Black]).expect("BROKEN");
-        let mut group_vec = vec![&twos, &fours];
+        let mut group_vec = vec![twos, fours.clone()];
         let actual = highest_value_collection(&mut group_vec);
         assert_eq!(Some(&fours), actual);
         println!("actual: {:?}", actual);
