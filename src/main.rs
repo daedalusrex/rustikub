@@ -1,5 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables)] //TODO remove during clean up phase
 
+// TODO add logging crate (Tracing), and replace print lines
+
 extern crate core;
 
 use game_loop::meta::GameConfig;

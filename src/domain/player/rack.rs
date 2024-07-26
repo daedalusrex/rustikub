@@ -22,9 +22,9 @@ use crate::domain::{Decompose, RummikubError};
 
 const INITIAL_TILES: u8 = 14;
 
-// TODO Consider derive Copy instead for consistent use of copy semantics
-///Player racks can hold any number of tiles (up to all tiles not had by other players)
+/// Player racks can hold any number of tiles (up to all tiles not had by other players)
 /// This information is known only to the owning player
+/// Cannot derive copy trait because Vec uses heap memory which prevents bitwise copy
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rack {
     pub rack: Vec<Tile>,
@@ -106,7 +106,6 @@ impl Rack {
 
     /// Returns all available sets that currently exist on the rack.
     /// Prefers Runs before Groups, so if a tile is needed in a run, it won't be re-used in a possible group
-    /// TODO Empty Vec vs Option Vec? also new rack at same time? is a lot?
     pub fn sets_on_rack(&self) -> Option<(Vec<Set>, Rack)> {
         let mut sets: Vec<Set> = vec![];
         let mut new_rack = self.clone();
@@ -161,14 +160,14 @@ impl Rack {
 
     /// Returns the run with the largest score value on the rack if it exists.
     /// TODO Current Implementation Ignores Jokers  -> Fix will be to increase search space by inserting them
-    /// TODO Add Tests for this one
     fn get_largest_run(&self) -> Option<Run> {
-        let mut reg_tiles = only_regular_tiles(&self.rack); // TODO This will break something
+        // Ignores Jokers, for now...
+        let mut reg_tiles = only_regular_tiles(&self.rack);
         reg_tiles.sort();
         reg_tiles.dedup();
         let mut runs: Vec<Option<Run>> = vec![];
         for color in Color::iter() {
-            // TODO Could make this little didy a Tile sequence filter function
+            // TODO Could make this little diddy a Tile sequence filter function
             let all_with_color: TileSequence = reg_tiles
                 .iter()
                 .filter_map(|t| {
@@ -190,7 +189,7 @@ impl Rack {
         }
         let mut binding = runs.iter().filter_map(|x| x.clone()).collect();
         let largest_of_all = highest_value_collection(&mut binding);
-        println!("Largest of all: {:?}", largest_of_all);
+        // println!("Largest of all: {:?}", largest_of_all);
         return largest_of_all.and_then(|run| Some(run.clone()));
     }
 
@@ -199,7 +198,6 @@ impl Rack {
     /// An Error Will be returned if any of the requested tiles are not present in the Rack
     /// Relies on Traits!!
     pub fn remove(&self, items: &impl Decompose) -> Result<Self, RummikubError> {
-        // TODO this is broken? Or maybe it's caller
         let tiles = items.decompose();
         let mut remaining = self.rack.clone();
         for tile in &tiles {
@@ -208,7 +206,6 @@ impl Rack {
             }
             let pos = remaining.iter().position(|r_tile| r_tile == tile);
             let some_pos = pos.ok_or(RummikubError)?;
-            // TODO this has got to be the problem? It doesn't preserve ordering?
             remaining.swap_remove(some_pos);
         }
         remaining.sort();
@@ -258,8 +255,8 @@ mod basic_tests {
     use crate::domain::sets::run::Run;
     use crate::domain::sets::Set;
     use crate::domain::table::boneyard::Boneyard;
-    use crate::domain::tiles::color::Color;
-    use crate::domain::tiles::number::Number;
+    use crate::domain::tiles::color::Color::*;
+    use crate::domain::tiles::number::Number::*;
     use crate::domain::tiles::Tile;
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
     use crate::domain::{Decompose, RummikubError};
@@ -271,9 +268,9 @@ mod basic_tests {
                 Tile::any_regular(),
                 Tile::any_regular(),
                 Tile::any_regular(),
-                RegularTile(Color::Black, Number::Five),
-                RegularTile(Color::Black, Number::Six),
-                RegularTile(Color::Black, Number::Seven),
+                RegularTile(Black, Five),
+                RegularTile(Black, Six),
+                RegularTile(Black, Seven),
             ],
             played_initial_meld: false,
         }
@@ -292,9 +289,9 @@ mod basic_tests {
     #[test]
     pub fn removal_of_different_items() {
         let simple_run_vec = vec![
-            RegularTile(Color::Black, Number::Five),
-            RegularTile(Color::Black, Number::Six),
-            RegularTile(Color::Black, Number::Seven),
+            RegularTile(Black, Five),
+            RegularTile(Black, Six),
+            RegularTile(Black, Seven),
         ];
         let simple_run = Run::parse(&simple_run_vec).unwrap();
         let some_rack = object_mother_some_rack();
@@ -304,8 +301,8 @@ mod basic_tests {
 
     #[test]
     pub fn correct_detection_of_runs_simple() {
-        let basic_run = Run::of(Number::One, Color::Black, 5).expect("BROKEN");
-        let other_run = Run::of(Number::Five, Color::Blue, 3).expect("BROKEN");
+        let basic_run = Run::of(One, Black, 5).expect("BROKEN");
+        let other_run = Run::of(Ten, Blue, 3).expect("BROKEN");
         let mut tiles = vec![];
         tiles.append(basic_run.decompose().as_mut());
         tiles.append(other_run.decompose().as_mut());
@@ -313,22 +310,16 @@ mod basic_tests {
             rack: tiles,
             played_initial_meld: false,
         };
-        let found_runs = test_rack.get_largest_run();
-        let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap(); // TODO unwrap bad
-                                                                             // Implicitly relies on sorting by color -> Shrugs
-        assert_eq!(found_runs, vec![other_run.clone(), basic_run.clone()]);
+        let found_runs = test_rack.get_largest_run().expect("Should have found run");
+        let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
+        assert_eq!(found_runs, other_run.clone());
         assert_eq!(found_sets, vec![Set::Run(other_run), Set::Run(basic_run)]);
     }
 
     #[test]
     fn correct_detection_of_groups_simple() {
-        let basic_group =
-            Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
-        let other_group = Group::of(
-            &Number::Twelve,
-            &vec![Color::Red, Color::Black, Color::Orange],
-        )
-        .unwrap();
+        let basic_group = Group::of(&Five, &vec![Black, Blue, Red]).unwrap();
+        let other_group = Group::of(&Twelve, &vec![Red, Black, Orange]).unwrap();
 
         let mut correct_tiles = vec![];
         correct_tiles.append(basic_group.decompose().as_mut());
@@ -349,19 +340,14 @@ mod basic_tests {
 
     #[test]
     pub fn detection_run_and_group() {
-        let basic_run = Run::of(Number::One, Color::Black, 6).unwrap();
-        let other_run = Run::of(Number::Five, Color::Blue, 3).unwrap();
-        let basic_group =
-            Group::of(&Number::Five, &vec![Color::Black, Color::Blue, Color::Red]).unwrap();
-        let other_group = Group::of(
-            &Number::Twelve,
-            &vec![Color::Red, Color::Black, Color::Orange],
-        )
-        .unwrap();
+        let one_to_six_black = Run::of(One, Black, 6).unwrap();
+        let five_to_eight_blue = Run::of(Five, Blue, 3).unwrap();
+        let basic_group = Group::of(&Five, &vec![Black, Blue, Red]).unwrap();
+        let other_group = Group::of(&Twelve, &vec![Red, Black, Orange]).unwrap();
 
         let mut tiles = vec![];
-        tiles.append(basic_run.decompose().as_mut());
-        tiles.append(other_run.decompose().as_mut());
+        tiles.append(one_to_six_black.decompose().as_mut());
+        tiles.append(five_to_eight_blue.decompose().as_mut());
         tiles.append(basic_group.decompose().as_mut());
         tiles.append(other_group.decompose().as_mut());
         let test_rack = Rack {
@@ -375,8 +361,8 @@ mod basic_tests {
         assert_eq!(
             found_sets,
             vec![
-                Set::Run(other_run),
-                Set::Run(basic_run),
+                Set::Run(one_to_six_black),
+                Set::Run(five_to_eight_blue),
                 Set::Group(basic_group),
                 Set::Group(other_group)
             ]
@@ -390,13 +376,52 @@ mod basic_tests {
         let foo = Rack {
             rack: vec![
                 JokersWild,
-                RegularTile(Color::Black, Number::Five),
-                RegularTile(Color::Black, Number::Six),
-                RegularTile(Color::Black, Number::Seven),
+                RegularTile(Black, Five),
+                RegularTile(Black, Six),
+                RegularTile(Black, Seven),
             ],
             played_initial_meld: false,
         };
         let expected_score: ScoreValue = ScoreValue::of(30 + 5 + 6 + 7);
         assert_eq!(expected_score, foo.total_value())
+    }
+
+    #[test]
+    pub fn largest_run_on_rack() {
+        let four_to_nine_black = Run::of(Four, Black, 5).expect("Run::Of must succeed");
+        let one_to_three_blue = Run::of(One, Blue, 3).expect("Run::Of must succeed");
+
+        let mut tiles = vec![];
+        tiles.extend(four_to_nine_black.decompose());
+        tiles.extend(one_to_three_blue.decompose());
+        tiles.push(RegularTile(Blue, One)); // Duplicate
+        tiles.push(RegularTile(Red, Five)); // Island
+        tiles.push(RegularTile(Orange, Ten)); // Almost
+        tiles.push(RegularTile(Orange, Eleven));
+        tiles.push(RegularTile(Orange, Thirteen));
+        let mut test_rack = Rack {
+            rack: tiles,
+            played_initial_meld: true,
+        };
+
+        let run: Run = test_rack
+            .get_largest_run()
+            .expect("Should find manufactured run");
+        assert_eq!(four_to_nine_black, run);
+        test_rack = test_rack
+            .remove(&four_to_nine_black)
+            .expect("Rack was manufactured");
+        let second_run = test_rack
+            .get_largest_run()
+            .expect("Should find manufactured run");
+        assert_eq!(one_to_three_blue, second_run);
+        test_rack = test_rack
+            .remove(&one_to_three_blue)
+            .expect("Rack was manufactured");
+        assert_eq!(
+            ScoreValue::of(1 + 5 + 10 + 11 + 13),
+            test_rack.total_value(),
+            "Rack should be remaining tiles 1+5+10+11+13"
+        );
     }
 }
