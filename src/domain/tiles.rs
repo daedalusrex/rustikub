@@ -196,14 +196,12 @@ impl Tile {
 #[cfg(test)]
 mod tile_tests {
     use super::{highest_value_collection, list_all_subsequences, unique_colors, Tile};
-    use crate::domain::score_value::ScoreValue;
     use crate::domain::sets::group::Group;
     use crate::domain::tiles::color::Color;
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number;
     use crate::domain::tiles::number::Number::*;
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-    use crate::domain::Decompose;
     use colored::Colorize;
     use std::cmp::Ordering;
     use std::collections::HashSet;

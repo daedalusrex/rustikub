@@ -106,6 +106,7 @@ impl Rack {
 
     /// Returns all available sets that currently exist on the rack.
     /// Prefers Runs before Groups, so if a tile is needed in a run, it won't be re-used in a possible group
+    /// TODO Hey, couldn't you just mix the rack and the table and perform this same algorithm? (kinda)
     pub fn sets_on_rack(&self) -> Option<(Vec<Set>, Rack)> {
         let mut sets: Vec<Set> = vec![];
         let mut new_rack = self.clone();

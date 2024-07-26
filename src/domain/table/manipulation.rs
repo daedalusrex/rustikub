@@ -2,6 +2,8 @@ use crate::domain::player::rack::Rack;
 use crate::domain::table::face_up::FaceUpTiles;
 
 pub fn rearrange(rack: Rack, table: FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
+    // TODO add some kind of grand decomposition, and then recompose the table set by set
+    // should be quite similar to what rack does, but on a grander scale. (ignoring the joker)
     None
 }
 
@@ -17,7 +19,7 @@ mod example_manipulation_tests_from_rulebook {
     use crate::domain::table::face_up::FaceUpTiles;
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number::*;
-    use crate::domain::tiles::Tile::RegularTile;
+    use crate::domain::tiles::Tile::{JokersWild, RegularTile};
     use crate::domain::tiles::*;
     use crate::domain::Decompose;
 
