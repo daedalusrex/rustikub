@@ -8,8 +8,10 @@ pub mod tiles;
 
 // FYI, doing this instead of mod.rs is the 'preferred' convention
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RummikubError;
+
+const MAX_TILE_COUNT: u8 = 106;
 
 /// Decomposes an abstract group of multiple (or a single) tiles,
 /// into the component tiles that constitute the thing that is being decomposed
@@ -23,6 +25,9 @@ pub trait Decompose {
     fn count(&self) -> Result<Count, RummikubError> {
         let tiles: TileSequence = self.decompose();
         let length = tiles.len();
+        if length > MAX_TILE_COUNT as usize {
+            return Err(RummikubError);
+        }
         let convert: Result<u8, _> = length.try_into();
         Ok(Count(convert.map_err(|e| RummikubError)?))
     }
@@ -32,27 +37,39 @@ pub trait Decompose {
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Count(u8);
 
-/// Downsides of new type paradigm, and from using Rummikub error
-// impl TryFrom<TryFromIntError> for Count {
-//     type Error = RummikubError;
-//
-//     fn try_from(value: u8) -> Result<Self, Self::Error> {
-//         if value > u8::MAX {
-//             Err(RummikubError)
-//         } else {
-//             Ok(Count(value))
-//         }
-//     }
-// }
 #[cfg(test)]
 mod domain_test {
     use crate::domain::tiles::Tile;
-    use crate::domain::{Count, Decompose};
+    use crate::domain::{Count, Decompose, RummikubError};
+
+    struct TestDummy;
+
+    // This was unnecessary, but is an interesting way to
+    // check default implementation of traits
+    impl Decompose for TestDummy {
+        fn decompose(&self) -> Vec<Tile> {
+            vec![Tile::any_regular(); 100] // Cool array constructor
+        }
+    }
 
     #[test]
-    fn property_confirmation() {
+    fn count_properties_confirmation() {
         let thing = Tile::any_regular();
         let val = thing.count().expect("ONE");
         assert_eq!(Count(1), val);
+    }
+
+    /// Wow, the possibilities here
+    #[test]
+    fn count_must_not_be_to_big() {
+        let dummy = TestDummy;
+        assert_eq!(Count(100), dummy.count().expect("100"));
+        let wait = vec![Tile::any_regular()];
+        assert_eq!(Count(1), wait.count().expect("Must be one"));
+
+        assert_eq!(
+            Result::Err(RummikubError),
+            vec![Tile::any_regular(); 200].count()
+        );
     }
 }

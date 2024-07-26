@@ -260,7 +260,7 @@ mod basic_tests {
     use crate::domain::tiles::number::Number::*;
     use crate::domain::tiles::Tile;
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-    use crate::domain::{Decompose, RummikubError};
+    use crate::domain::{Count, Decompose, RummikubError};
 
     fn object_mother_some_rack() -> Rack {
         Rack {
@@ -424,5 +424,6 @@ mod basic_tests {
             test_rack.total_value(),
             "Rack should be remaining tiles 1+5+10+11+13"
         );
+        assert_eq!(Count(5), test_rack.count().expect("Rack must be countable"))
     }
 }
