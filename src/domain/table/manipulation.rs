@@ -1,7 +1,7 @@
 use crate::domain::player::rack::Rack;
 use crate::domain::table::face_up::FaceUpTiles;
 
-pub fn rearrange(rack: Rack, table: FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
+pub fn rearrange(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
     // TODO add some kind of grand decomposition, and then recompose the table set by set
     // should be quite similar to what rack does, but on a grander scale. (ignoring the joker)
     None
@@ -15,7 +15,7 @@ mod example_manipulation_tests_from_rulebook {
     use crate::domain::score_value::ScoreValue;
     use crate::domain::sets::group::Group;
     use crate::domain::sets::run::Run;
-    use crate::domain::sets::Set;
+    use crate::domain::sets::Set::*;
     use crate::domain::table::face_up::FaceUpTiles;
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number::*;
@@ -23,58 +23,174 @@ mod example_manipulation_tests_from_rulebook {
     use crate::domain::tiles::*;
     use crate::domain::Decompose;
 
+    // TODO These should be parameterized tests, as the only difference is the input and output
+    // But they do have complex constructors, sooo
+
     /// Blue 4,5,6 are on the table. The player  adds a blue 3. The blue 8 is added to the
     /// group of 8’s already on the table.
     #[test]
     pub fn add_tile_to_make_new_set() {
-        let example_rack: Rack = Rack {
-            rack: vec![RegularTile(Blue, Three), RegularTile(Blue, Eight)],
-            played_initial_meld: true,
-        };
+        let example_rack =
+            Rack::new(&vec![RegularTile(Blue, Three), RegularTile(Blue, Eight)]).expect("TEST");
         let example_table: FaceUpTiles = FaceUpTiles {
-            sets: vec![Set::Group(
-                Group::of(&Eight, &vec![Red, Orange, Black]).unwrap(),
-            )],
+            sets: vec![
+                Group(Group::of(&Eight, &vec![Red, Orange, Black]).expect("TEST")),
+                Run(Run::of(Four, Blue, 3).expect("TEST")),
+            ],
         };
 
-        let op_result = rearrange(example_rack, example_table);
+        let op_result = rearrange(&example_rack, &example_table);
+
         assert!(op_result.is_some());
+        let expected_table = FaceUpTiles {
+            sets: vec![
+                Group(Group::of(&Eight, &vec![Red, Orange, Black, Blue]).expect("TEST")),
+                Run(Run::of(Three, Blue, 4).expect("TEST")),
+            ],
+        };
         let (actual_rack, actual_table) = op_result.unwrap();
         assert!(actual_rack.is_empty());
-        // TODO make assertions on state of table as well
+        assert_eq!(expected_table, actual_table);
     }
 
     /// A tile is missing from the potential blue run on the rack. The player takes the blue 4
     /// from the group of four on the table and lays the run: blue 3,4,5,6.
     #[test]
     pub fn remove_and_use_fourth_to_create_new_set() {
-        panic!()
+        let test_rack = Rack::new(&vec![
+            RegularTile(Blue, Three),
+            RegularTile(Blue, Five),
+            RegularTile(Blue, Six),
+        ])
+        .expect("TEST");
+
+        let test_table = FaceUpTiles {
+            sets: vec![Group(
+                Group::of(&Four, &vec![Red, Orange, Black, Blue]).expect("TEST"),
+            )],
+        };
+
+        let expected_table = FaceUpTiles {
+            sets: vec![Group(
+                Group::of(&Four, &vec![Red, Orange, Black, Blue]).expect("TEST"),
+            )],
+        };
+        let actual = rearrange(&test_rack, &test_table);
+
+        assert!(actual.is_some());
+        let (actual_rack, actual_table) = actual.expect("TEST");
+        assert!(actual_rack.is_empty());
+        assert_eq!(expected_table, actual_table)
     }
 
     /// The player adds a blue 11 to the run and uses the 8’s to form a new group
     #[test]
     pub fn add_fourth_and_remove_tile_to_create_new_set() {
-        panic!()
+        let test_rack = Rack::new(&vec![
+            RegularTile(Blue, Eleven),
+            RegularTile(Black, Eight),
+            RegularTile(Orange, Eight),
+        ])
+        .expect("TEST");
+
+        let test_table = FaceUpTiles {
+            sets: vec![Run(Run::of(Eight, Blue, 3).expect("TEST"))],
+        };
+
+        let actual = rearrange(&test_rack, &test_table);
+
+        assert!(actual.is_some());
+        let (actual_rack, actual_table) = actual.expect("TEST");
+        let expected_table = FaceUpTiles {
+            sets: vec![
+                Run(Run::of(Nine, Blue, 4).expect("TEST")),
+                Group(Group::of(&Eight, &vec![Orange, Black, Blue]).expect("TEST")),
+            ],
+        };
+        assert!(actual_rack.is_empty());
+        assert_eq!(expected_table, actual_table)
     }
 
     /// Splitting a run, The player splits the run and uses the red 6 to form two new runs.
     #[test]
     pub fn splitting_a_run() {
-        panic!()
+        let test_rack = Rack::new(&vec![RegularTile(Red, Six)]).expect("TEST");
+
+        let test_table = FaceUpTiles {
+            sets: vec![Run(Run::of(Four, Red, 5).expect("TEST"))],
+        };
+
+        let actual = rearrange(&test_rack, &test_table);
+
+        assert!(actual.is_some());
+        let (actual_rack, actual_table) = actual.expect("TEST");
+        let expected_table = FaceUpTiles {
+            sets: vec![
+                Run(Run::of(Four, Red, 3).expect("TEST")),
+                Run(Run::of(Six, Red, 3).expect("TEST")),
+            ],
+        };
+        assert!(actual_rack.is_empty());
+        assert_eq!(expected_table, actual_table)
     }
 
     /// The player places a blue 1 from the rack with the orange 1 from the run and the red 1 from
     /// the group to form a new group.
     #[test]
     pub fn combined_split() {
-        panic!()
+        let test_rack = Rack::new(&vec![RegularTile(Blue, One)]).expect("TEST");
+
+        let test_table = FaceUpTiles {
+            sets: vec![
+                Run(Run::of(One, Orange, 4).expect("TEST")),
+                Group(Group::of(&One, &vec![Blue, Black, Red, Orange]).expect("TEST")),
+            ],
+        };
+
+        let actual = rearrange(&test_rack, &test_table);
+
+        assert!(actual.is_some());
+        let (actual_rack, actual_table) = actual.expect("TEST");
+        let expected_table = FaceUpTiles {
+            sets: vec![
+                Run(Run::of(Two, Orange, 3).expect("TEST")),
+                Group(Group::of(&One, &vec![Black, Blue, Orange]).expect("TEST")),
+                Group(Group::of(&One, &vec![Blue, Red, Orange]).expect("TEST")),
+            ],
+        };
+        assert!(actual_rack.is_empty());
+        assert_eq!(expected_table, actual_table)
     }
 
     /// The player manipulates the three existing sets on the table, and use the black 10 and
     /// the blue 5 from the rack to make three groups and one new run.
     #[test]
     pub fn multiple_split() {
-        panic!()
+        let test_rack =
+            Rack::new(&vec![RegularTile(Black, Ten), RegularTile(Blue, Five)]).expect("TEST");
+
+        let test_table = FaceUpTiles {
+            sets: vec![
+                Run(Run::of(Five, Orange, 3).expect("TEST")),
+                Run(Run::of(Five, Red, 3).expect("TEST")),
+                Run(Run::of(Five, Black, 5).expect("TEST")),
+            ],
+        };
+
+        let actual = rearrange(&test_rack, &test_table);
+
+        assert!(actual.is_some());
+        let (actual_rack, actual_table) = actual.expect("TEST");
+        let expected_table = FaceUpTiles {
+            sets: vec![
+                Group(Group::of(&Five, &vec![Blue, Orange, Red, Black]).expect("TEST")),
+                Group(Group::of(&Six, &vec![Orange, Red, Black]).expect("TEST")),
+                Group(Group::of(&Seven, &vec![Orange, Red, Black]).expect("TEST")),
+                Run(Run::of(Five, Black, 5).expect("TEST")),
+            ],
+        };
+        assert!(actual_rack.is_empty());
+        assert_eq!(expected_table, actual_table)
     }
 }
 
@@ -89,26 +205,26 @@ mod example_clearing_joker_from_rulebook {
     ///The player can replace the joker by each one of the tiles on his rack or by both
     #[test]
     pub fn can_replace_joker_with_black_or_yellow_three() {
-        panic!()
+        todo!()
     }
 
     /// The player splits the run and clears the joker. For the record, we've never played it this way
     /// and it blows my mind
     #[test]
     pub fn can_split_run_and_implicitly_extract_joker() {
-        panic!()
+        todo!()
     }
 
     ///The player adds the blue 5 and clears the joker.
     #[test]
     pub fn can_simply_replace_joker_with_blue_five() {
-        panic!()
+        todo!()
     }
 
     ///The player splits the run. He moves the black 1 to the group of ones, he moves the
     /// black 2 to the group of twos and frees the joker
     #[test]
     pub fn can_manipulate_table_without_tile_from_rack_and_implicitly_free_joker() {
-        panic!()
+        todo!()
     }
 }

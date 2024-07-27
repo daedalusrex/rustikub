@@ -27,7 +27,7 @@ const INITIAL_TILES: u8 = 14;
 /// Cannot derive copy trait because Vec uses heap memory which prevents bitwise copy
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rack {
-    pub rack: Vec<Tile>,
+    pub rack: Vec<Tile>, // TODO make this private, create a nicer constructor
     pub played_initial_meld: bool,
 }
 
@@ -60,6 +60,14 @@ impl Decompose for Rack {
 }
 
 impl Rack {
+    pub fn new(tiles: &TileSequence) -> Result<Rack, RummikubError> {
+        tiles.count()?;
+        Ok(Rack {
+            rack: tiles.clone(),
+            played_initial_meld: false,
+        })
+    }
+
     // TODO also return new rack as part of state, and consistency with other design choices
     pub fn can_play_initial_meld(&self) -> Option<InitialMeld> {
         if let Some((sets, rack)) = self.sets_on_rack() {

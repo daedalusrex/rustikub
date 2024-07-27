@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 /// and or add/determine the difference with a single new tile.
 pub struct Layout;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FaceUpTiles {
     // Publicly viewable and mutable by all players, has all the sets that have been placed
     pub sets: Vec<Set>,
