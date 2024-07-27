@@ -1,9 +1,40 @@
 use crate::domain::player::rack::Rack;
+use crate::domain::sets::Set;
 use crate::domain::table::face_up::FaceUpTiles;
 
+/// If possible, places one (or more) tiles from the rack into the face up tiles on the table
+/// Returns the new Rack and New Tiles if successful, otherwise returns None,
+/// indicating no change could be made
 pub fn rearrange(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
     // TODO add some kind of grand decomposition, and then recompose the table set by set
     // should be quite similar to what rack does, but on a grander scale. (ignoring the joker)
+    let mut sets: Vec<Set> = vec![];
+    let mut new_rack = rack.clone();
+
+    let mut optional_run = rack.get_largest_run();
+    while let Some(ref largest_run) = optional_run {
+        new_rack = new_rack
+            .remove(largest_run)
+            .expect("Must be able to remove the found run");
+        sets.push(Set::Run(largest_run.clone()));
+        optional_run = new_rack.get_largest_run();
+    }
+
+    let runless_rack = new_rack.clone();
+    for g in runless_rack.groups_on_rack() {
+        sets.push(Set::Group(g.clone()));
+        new_rack = new_rack
+            .remove(&g)
+            .expect("Unable to remove set from rack, which claims it exists!");
+    }
+    return if sets.len() == 0 {
+        None
+    } else {
+        Some((sets, new_rack))
+    };
+
+    // TODO Consider as part of algorithm using : src/domain/table/face_up.rs:50 place_new_tile
+    // Which attempts to place a single tile, for every tile
     None
 }
 
@@ -39,16 +70,16 @@ mod example_manipulation_tests_from_rulebook {
             ],
         };
 
-        let op_result = rearrange(&example_rack, &example_table);
+        let actual = rearrange(&example_rack, &example_table);
 
-        assert!(op_result.is_some());
+        assert!(actual.is_some());
         let expected_table = FaceUpTiles {
             sets: vec![
                 Group(Group::of(&Eight, &vec![Red, Orange, Black, Blue]).expect("TEST")),
                 Run(Run::of(Three, Blue, 4).expect("TEST")),
             ],
         };
-        let (actual_rack, actual_table) = op_result.unwrap();
+        let (actual_rack, actual_table) = actual.unwrap();
         assert!(actual_rack.is_empty());
         assert_eq!(expected_table, actual_table);
     }

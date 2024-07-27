@@ -144,7 +144,7 @@ impl Rack {
 
     /// Returns all Groups that are possible to create given the tiles currently present on the rack
     /// TODO Current Implementation Ignores Jokers
-    fn groups_on_rack(&self) -> Vec<Group> {
+    pub fn groups_on_rack(&self) -> Vec<Group> {
         let mut groups: Vec<Group> = vec![];
 
         let mut reg_tiles = only_regular_tiles(&self.rack);
@@ -169,7 +169,7 @@ impl Rack {
 
     /// Returns the run with the largest score value on the rack if it exists.
     /// TODO Current Implementation Ignores Jokers  -> Fix will be to increase search space by inserting them
-    fn get_largest_run(&self) -> Option<Run> {
+    pub fn get_largest_run(&self) -> Option<Run> {
         // Ignores Jokers, for now...
         let mut reg_tiles = only_regular_tiles(&self.rack);
         reg_tiles.sort();
@@ -224,30 +224,26 @@ impl Rack {
         })
     }
 
-    /// If possible, places one (or more) tiles from from the rack onto the face up tiles
-    /// following the constraints for groups and sets. Returns the new Rack and New Tiles if successful
-    /// otherwise returns None, indicating no change was made
-    pub fn rearrange_and_place(&self, face_up: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
-        let mut mut_face_up = face_up.clone();
-        let tiles_to_attempt = self.decompose();
-        let mut mut_rack = self.clone();
-        let mut change_occurred = false;
-
-        for attempt in tiles_to_attempt {
-            if let Some(place_success) = mut_face_up.place_new_tile(&attempt) {
-                mut_face_up = place_success;
-                mut_rack = mut_rack.remove(&attempt).unwrap();
-                change_occurred = true;
-            }
-        }
-
-        // TODO replace with partial eq derivation on face up
-        return if change_occurred {
-            Some((mut_rack, mut_face_up))
-        } else {
-            None
-        };
-    }
+    // TODO Remove this
+    // pub fn rearrange_and_place(&self, face_up: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
+    //     let mut mut_face_up = face_up.clone();
+    //     let tiles_to_attempt = self.decompose();
+    //     let mut mut_rack = self.clone();
+    //     let mut change_occurred = false;
+    //
+    //     for attempt in tiles_to_attempt {
+    //         if let Some(place_success) = mut_face_up.place_new_tile(&attempt) {
+    //             mut_face_up = place_success;
+    //             mut_rack = mut_rack.remove(&attempt).unwrap();
+    //             change_occurred = true;
+    //         }
+    //     }
+    // //     return if change_occurred {
+    //         Some((mut_rack, mut_face_up))
+    //     } else {
+    //         None
+    //     };
+    // }
 
     // TODO make return new rack for consistent style
     pub fn add_tile_to_rack(&mut self, tile: &Tile) {

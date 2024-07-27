@@ -8,6 +8,7 @@ use crate::domain::player::rack::Rack;
 use crate::domain::player::Player;
 use crate::domain::score_value::ScoreValue;
 use crate::domain::table::face_up::FaceUpTiles;
+use crate::domain::table::manipulation::rearrange;
 use meta::GameOutcome;
 use state::{GameState, PublicGameState};
 use std::cmp::Ordering;
@@ -47,9 +48,7 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             println!("Table Now Has:\n{}", mut_table.face_up)
         }
 
-        if let Some((rack_after_placing, new_face_up)) =
-            mut_rack.rearrange_and_place(&mut_table.face_up)
-        {
+        if let Some((rack_after_placing, new_face_up)) = rearrange(&mut_rack, &mut_table.face_up) {
             println!("Rearranged Face Up Tiles and Placing some from Rack!");
             mut_table.face_up = new_face_up;
             mut_rack = rack_after_placing;
