@@ -17,6 +17,7 @@ use crate::domain::tiles::number::Number;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use crate::domain::tiles::{
     highest_value_collection, list_all_subsequences, only_regular_tiles, Tile, TileSequence,
+    TileSequenceType,
 };
 use crate::domain::{Decompose, RummikubError};
 
@@ -152,14 +153,8 @@ impl Rack {
         // Power of derive is very cool
         reg_tiles.dedup();
         for num in Number::iter() {
-            let only_matching_nums: Vec<Tile> = reg_tiles
-                .iter()
-                .filter(|t| match t {
-                    RegularTile(c, n) => n == &num,
-                    _ => false,
-                })
-                .map(|x| x.clone())
-                .collect();
+            let only_matching_nums: TileSequence =
+                TileSequenceType(reg_tiles.clone()).filter_number(num);
             if let Some(found) = Group::parse(only_matching_nums) {
                 groups.push(found);
             }
@@ -168,38 +163,10 @@ impl Rack {
     }
 
     /// Returns the run with the largest score value on the rack if it exists.
-    /// TODO Current Implementation Ignores Jokers  -> Fix will be to increase search space by inserting them
     pub fn get_largest_run(&self) -> Option<Run> {
         // Ignores Jokers, for now...
-        let mut reg_tiles = only_regular_tiles(&self.rack);
-        reg_tiles.sort();
-        reg_tiles.dedup();
-        let mut runs: Vec<Option<Run>> = vec![];
-        for color in Color::iter() {
-            // TODO Could make this little diddy a Tile sequence filter function
-            let all_with_color: TileSequence = reg_tiles
-                .iter()
-                .filter_map(|t| {
-                    if t.is_color(&color) {
-                        return Some(t.clone());
-                    }
-                    None
-                })
-                .collect();
-
-            let all_sequences = list_all_subsequences(&all_with_color);
-            // TODO insert however many jokers into each position for each sequence here
-
-            // Parse all subsequences
-            let mut valid_runs: Vec<Run> = all_sequences.iter().filter_map(Run::parse).collect();
-            let largest_run = highest_value_collection(&mut valid_runs);
-            // println!("\nHighest Collection {:?}", largest_run)
-            runs.push(largest_run.and_then(|r| Some(r.clone())));
-        }
-        let mut binding = runs.iter().filter_map(|x| x.clone()).collect();
-        let largest_of_all = highest_value_collection(&mut binding);
-        // println!("Largest of all: {:?}", largest_of_all);
-        return largest_of_all.and_then(|run| Some(run.clone()));
+        let tiles = TileSequenceType(self.rack.clone());
+        tiles.largest_possible_run()
     }
 
     /// Removes the given vector of tiles from the rack and returns a new version
@@ -207,6 +174,7 @@ impl Rack {
     /// An Error Will be returned if any of the requested tiles are not present in the Rack
     /// Relies on Traits!!
     pub fn remove(&self, items: &impl Decompose) -> Result<Self, RummikubError> {
+        // TODO re-implement the removal part in tileSequence or something
         let tiles = items.decompose();
         let mut remaining = self.rack.clone();
         for tile in &tiles {
@@ -224,7 +192,7 @@ impl Rack {
         })
     }
 
-    // TODO Remove this
+    // TODO Remove this, after basic rearrange picks up functionality of just add one
     // pub fn rearrange_and_place(&self, face_up: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
     //     let mut mut_face_up = face_up.clone();
     //     let tiles_to_attempt = self.decompose();
@@ -265,6 +233,8 @@ mod basic_tests {
     use crate::domain::tiles::Tile;
     use crate::domain::tiles::Tile::{JokersWild, RegularTile};
     use crate::domain::{Count, Decompose, RummikubError};
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
 
     fn object_mother_some_rack() -> Rack {
         Rack {
@@ -404,6 +374,8 @@ mod basic_tests {
         tiles.push(RegularTile(Orange, Ten)); // Almost
         tiles.push(RegularTile(Orange, Eleven));
         tiles.push(RegularTile(Orange, Thirteen));
+        let mut rng = thread_rng();
+        tiles.shuffle(&mut rng);
         let mut test_rack = Rack {
             rack: tiles,
             played_initial_meld: true,

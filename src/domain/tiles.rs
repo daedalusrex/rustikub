@@ -2,6 +2,7 @@ pub mod color;
 pub mod number;
 
 use crate::domain::score_value::ScoreValue;
+use crate::domain::sets::run::Run;
 use crate::domain::Decompose;
 use color::Color;
 use colored::ColoredString;
@@ -73,10 +74,64 @@ impl Decompose for TileSequence {
     }
 }
 
+impl TileSequenceType {
+    /// Returns the same sequence of tiles, in order, but only with tiles that match the color
+    pub fn filter_color(&self, color: Color) -> TileSequence {
+        self.0
+            .iter()
+            .filter_map(|t| {
+                // This syntax is ugly, but I don't want to fight rustfmt
+                // below filter then map is cleaner
+                if t.is_color(&color) {
+                    Some(t.clone())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    pub fn filter_number(&self, num: Number) -> TileSequence {
+        // I did it this way elsewhere. Whoops
+        self.0
+            .iter()
+            .filter(|&t| t.is_number(&num))
+            .map(|t| t.clone())
+            .collect()
+    }
+
+    /// Exactly the same as the Rack get_largest_run, but New!
+    /// Also public.
+    /// TODO Current Implementation Ignores Jokers  -> Fix will be to increase search space by inserting them
+    pub fn largest_possible_run(&self) -> Option<Run> {
+        let mut optional_runs: Vec<Run> = vec![];
+        // don't need to remove regular tiles cuz of cool iters above
+        for color in Color::iter() {
+            let mut with_color = self.filter_color(color);
+            with_color.sort();
+            with_color.dedup();
+            let all_subsequences = list_all_subsequences(&with_color);
+            // TODO insert however many jokers into each position for each sequence here
+            optional_runs.extend(
+                all_subsequences
+                    .iter()
+                    .filter_map(Run::parse)
+                    .collect::<Vec<Run>>(), // Not sure why needed but okay
+            );
+        }
+        let mut valid_runs: Vec<Run> = optional_runs
+            .iter()
+            .filter_map(|r| Some(r.clone()))
+            .collect();
+        let largest_run = highest_value_collection(&mut valid_runs);
+        largest_run.and_then(|run| Some(run.clone()))
+    }
+}
+
 // An alternative implementation using the "New Type Idiom"
 // https://doc.rust-lang.org/rust-by-example/generics/new_types.html
 /// NEWTYPE: An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
-pub struct TileSequenceType(Vec<Tile>);
+pub struct TileSequenceType(pub Vec<Tile>);
 
 impl Decompose for TileSequenceType {
     fn decompose(&self) -> TileSequence {
@@ -195,7 +250,9 @@ impl Tile {
 
 #[cfg(test)]
 mod tile_tests {
-    use super::{highest_value_collection, list_all_subsequences, unique_colors, Tile};
+    use super::{
+        highest_value_collection, list_all_subsequences, unique_colors, Tile, TileSequenceType,
+    };
     use crate::domain::sets::group::Group;
     use crate::domain::tiles::color::Color;
     use crate::domain::tiles::color::Color::*;
@@ -402,5 +459,26 @@ mod tile_tests {
         expected.insert(Red);
         expected.insert(Blue);
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_filters_of_tile_sequence() {
+        let tiles = TileSequenceType(vec![
+            RegularTile(Red, One),
+            RegularTile(Blue, One),
+            JokersWild,
+            RegularTile(Black, One),
+            RegularTile(Red, Two),
+        ]);
+
+        let color_expectation = vec![RegularTile(Red, One), RegularTile(Red, Two)];
+        assert_eq!(color_expectation, tiles.filter_color(Red));
+
+        let num_expectation = vec![
+            RegularTile(Red, One),
+            RegularTile(Blue, One),
+            RegularTile(Black, One),
+        ];
+        assert_eq!(num_expectation, tiles.filter_number(One));
     }
 }

@@ -1,6 +1,8 @@
 use crate::domain::player::rack::Rack;
 use crate::domain::sets::Set;
 use crate::domain::table::face_up::FaceUpTiles;
+use crate::domain::tiles::TileSequenceType;
+use crate::domain::Decompose;
 
 /// If possible, places one (or more) tiles from the rack into the face up tiles on the table
 /// Returns the new Rack and New Tiles if successful, otherwise returns None,
@@ -9,29 +11,31 @@ pub fn rearrange(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)
     // TODO add some kind of grand decomposition, and then recompose the table set by set
     // should be quite similar to what rack does, but on a grander scale. (ignoring the joker)
     let mut sets: Vec<Set> = vec![];
-    let mut new_rack = rack.clone();
+    let mut tiles: TileSequenceType = TileSequenceType(rack.decompose());
 
-    let mut optional_run = rack.get_largest_run();
-    while let Some(ref largest_run) = optional_run {
-        new_rack = new_rack
-            .remove(largest_run)
-            .expect("Must be able to remove the found run");
-        sets.push(Set::Run(largest_run.clone()));
-        optional_run = new_rack.get_largest_run();
-    }
-
-    let runless_rack = new_rack.clone();
-    for g in runless_rack.groups_on_rack() {
-        sets.push(Set::Group(g.clone()));
-        new_rack = new_rack
-            .remove(&g)
-            .expect("Unable to remove set from rack, which claims it exists!");
-    }
-    return if sets.len() == 0 {
-        None
-    } else {
-        Some((sets, new_rack))
-    };
+    let mut optional_run = tiles.largest_possible_run();
+    // TODO next step, how to remove runs once they are confirmed to exist.
+    // TODO also, this algorithm won't work unless we get back tracking somehow
+    // while let Some(ref largest_run) = optional_run {
+    //     new_rack = new_rack
+    //         .remove(largest_run)
+    //         .expect("Must be able to remove the found run");
+    //     sets.push(Set::Run(largest_run.clone()));
+    //     optional_run = new_rack.get_largest_run();
+    // }
+    //
+    // let runless_rack = new_rack.clone();
+    // for g in runless_rack.groups_on_rack() {
+    //     sets.push(Set::Group(g.clone()));
+    //     new_rack = new_rack
+    //         .remove(&g)
+    //         .expect("Unable to remove set from rack, which claims it exists!");
+    // }
+    // return if sets.len() == 0 {
+    //     None
+    // } else {
+    //     Some((sets, new_rack))
+    // };
 
     // TODO Consider as part of algorithm using : src/domain/table/face_up.rs:50 place_new_tile
     // Which attempts to place a single tile, for every tile
