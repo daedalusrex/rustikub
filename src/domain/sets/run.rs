@@ -1,10 +1,10 @@
-use super::ParseError;
 use super::ParseError::*;
 use crate::domain::score_value::ScoreValue;
 use crate::domain::tiles::color::Color;
 use crate::domain::tiles::number::Number;
+use crate::domain::tiles::tile_sequence::{unique_colors, TileSequence};
+use crate::domain::tiles::Tile;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-use crate::domain::tiles::{only_regular_tiles, unique_colors, Tile, TileSequence};
 use crate::domain::Decompose;
 use std::collections::HashSet;
 use std::vec;

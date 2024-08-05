@@ -95,3 +95,30 @@ impl Number {
         ScoreValue::of(total)
     }
 }
+
+#[cfg(test)]
+mod number_tests {
+    use super::*;
+    use crate::domain::tiles::number::Number::*;
+    use strum::EnumCount;
+
+    #[test]
+    fn correct_cardinality() {
+        assert_eq!(Number::COUNT, 13)
+    }
+
+    #[test]
+    fn number_ordering() {
+        assert!(One < Two);
+        assert!(Two < Thirteen);
+        let mut prev = One;
+        for num in Number::iter() {
+            if num == One {
+                continue;
+            } else {
+                assert!(prev < num);
+                prev = num;
+            }
+        }
+    }
+}

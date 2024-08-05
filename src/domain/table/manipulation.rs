@@ -1,12 +1,13 @@
 use crate::domain::player::rack::Rack;
 use crate::domain::sets::Set;
 use crate::domain::table::face_up::FaceUpTiles;
-use crate::domain::tiles::TileSequenceType;
+use crate::domain::tiles::tile_sequence::TileSequenceType;
 use crate::domain::Decompose;
 
 /// If possible, places one (or more) tiles from the rack into the face up tiles on the table
 /// Returns the new Rack and New Tiles if successful, otherwise returns None,
 /// indicating no change could be made
+
 pub fn rearrange(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
     // TODO add some kind of grand decomposition, and then recompose the table set by set
     // should be quite similar to what rack does, but on a grander scale. (ignoring the joker)

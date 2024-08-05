@@ -11,14 +11,9 @@ use crate::domain::sets::group::Group;
 use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
 use crate::domain::table::boneyard::Boneyard;
-use crate::domain::table::face_up::FaceUpTiles;
-use crate::domain::tiles::color::Color;
 use crate::domain::tiles::number::Number;
-use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-use crate::domain::tiles::{
-    highest_value_collection, list_all_subsequences, only_regular_tiles, Tile, TileSequence,
-    TileSequenceType,
-};
+use crate::domain::tiles::tile_sequence::{only_regular_tiles, TileSequence, TileSequenceType};
+use crate::domain::tiles::Tile;
 use crate::domain::{Decompose, RummikubError};
 
 const INITIAL_TILES: u8 = 14;

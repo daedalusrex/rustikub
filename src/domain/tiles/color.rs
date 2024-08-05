@@ -21,7 +21,6 @@ impl Color {
     ///There are many ways to "add one" to enums, this is very pedantic, but
     /// also explicit, and avoids any possible issues with conversions of primitives
     pub fn next(&self) -> Self {
-        use crate::domain::tiles::Color::{Black, Blue, Orange, Red};
         use Color::*;
         match self {
             Red => Blue,
@@ -29,5 +28,16 @@ impl Color {
             Orange => Black,
             Black => Red,
         }
+    }
+}
+
+#[cfg(test)]
+mod color_tests {
+    use super::*;
+    use strum::EnumCount;
+
+    #[test]
+    fn correct_cardinality() {
+        assert_eq!(Color::COUNT, 4);
     }
 }

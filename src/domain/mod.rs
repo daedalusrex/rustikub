@@ -1,5 +1,6 @@
-use crate::domain::tiles::{Tile, TileSequence};
-use std::num::TryFromIntError;
+use crate::domain::tiles::Tile;
+use tiles::tile_sequence::TileSequence;
+
 pub mod player;
 pub mod score_value;
 pub mod sets;
@@ -7,6 +8,7 @@ pub mod table;
 pub mod tiles;
 
 // FYI, doing this instead of mod.rs is the 'preferred' convention
+// Preferred by who I don't know, but I like the way it's organized with the mod.rs
 
 #[derive(Debug, PartialEq)]
 pub struct RummikubError;
