@@ -37,28 +37,32 @@ impl Decompose for TileSequence {
     }
 }
 
+// An alternative implementation using the "New Type Idiom"
+// https://doc.rust-lang.org/rust-by-example/generics/new_types.html
+/// NEWTYPE: An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
+pub struct TileSequenceType(pub Vec<Tile>);
+
+impl Decompose for TileSequenceType {
+    fn decompose(&self) -> TileSequence {
+        return self.0.decompose();
+    }
+}
 impl TileSequenceType {
     /// Returns the same sequence of tiles, in order, but only with tiles that match the color
     pub fn filter_color(&self, color: Color) -> TileSequence {
         self.0
             .iter()
-            .filter_map(|t| {
-                // This syntax is ugly, but I don't want to fight rustfmt
-                // below filter then map is cleaner
-                if t.is_color(&color) {
-                    Some(t.clone())
-                } else {
-                    None
-                }
-            })
+            .filter(|t| t.is_color(color))
+            .map(|t| t.clone())
             .collect()
     }
 
+    /// Returns the same sequence of tiles, in order, but only with tiles matching the number
     pub fn filter_number(&self, num: Number) -> TileSequence {
-        // I did it this way elsewhere. Whoops
+        // TODO replace other instances of this by calling this one
         self.0
             .iter()
-            .filter(|&t| t.is_number(&num))
+            .filter(|&t| t.is_number(num))
             .map(|t| t.clone())
             .collect()
     }
@@ -89,16 +93,23 @@ impl TileSequenceType {
         let largest_run = highest_value_collection(&mut valid_runs);
         largest_run.and_then(|run| Some(run.clone()))
     }
-}
 
-// An alternative implementation using the "New Type Idiom"
-// https://doc.rust-lang.org/rust-by-example/generics/new_types.html
-/// NEWTYPE: An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
-pub struct TileSequenceType(pub Vec<Tile>);
+    /// Attempts to remove the given items from the tile sequence.
+    /// Returns the new sequence if successful and None if not possible to remove
+    /// Some(empty) is a valid response indicating all were removed
+    pub fn remove(&self, items: &impl Decompose) -> Option<TileSequence> {
+        let to_remove = items.decompose();
+        let mut trimmed = self.0.clone();
 
-impl Decompose for TileSequenceType {
-    fn decompose(&self) -> TileSequence {
-        return self.0.decompose();
+        for tile in to_remove {
+            if !trimmed.contains(&tile) {
+                return None;
+            } else {
+                let pos = trimmed.iter().position(|t| t == &tile)?;
+                trimmed.remove(pos);
+            }
+        }
+        Some(trimmed)
     }
 }
 
@@ -119,43 +130,22 @@ where
     return subsequences;
 }
 
-fn ordering_closure<T: Decompose>(_self: &T, _other: &T) -> Ordering {
-    // I don't know what && means, but ChatGPT says it works so....
-    let self_score = ScoreValue::add_em_up(&_self.decompose());
-    let other_score = ScoreValue::add_em_up(&_other.decompose());
-    return Ord::cmp(&self_score, &other_score);
-}
-
 /// Ranks a given set of Tile Sequences (or what have you) by their Scores
 /// Highest Value is first.
-/// TODO probably a way to do this by implementing the partial order trait and breaking this up...
 pub fn highest_value_collection<T: Decompose>(collections: &mut Vec<T>) -> Option<&T> {
     // An inner function, No need for a closure since it doesn't use anything in the outer scope
+    fn ordering_closure<T: Decompose>(_self: &T, _other: &T) -> Ordering {
+        // I don't know what && means, but ChatGPT says it works so....
+        let self_score = ScoreValue::add_em_up(&_self.decompose());
+        let other_score = ScoreValue::add_em_up(&_other.decompose());
+        return Ord::cmp(&self_score, &other_score);
+    }
+
     collections.sort_by(ordering_closure);
     collections.last()
-
-    // TODO the idiomatic way which require Ord for (ScoreValue, &T)
-    // How to implement traits for "adhoc" tuples? -> Automatically present of Ord is on each item in the tuple
-    // let max_value = sequences
-    //     .iter()
-    //     .map(|&col| (ScoreValue::add_em_up(&col.decompose()), col))
-    //     .max();
-    // let (_, col) = max_value?;
-    // Some(col)
-    // let mut max_value = ScoreValue::of(0);
-    // let mut max_col: &T = collections[0];
-    // for &col in collections {
-    //     let col_value = ScoreValue::add_em_up(&col.decompose());
-    //     if col_value > max_value {
-    //         max_value = col_value;
-    //         max_col = &col;
-    //     }
-    // }
-    // return Some(max_col);
 }
 
 #[cfg(test)]
-#[deny(unused_imports)]
 mod sequence_tests {
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number::*;
@@ -244,5 +234,74 @@ mod sequence_tests {
             RegularTile(Black, One),
         ];
         assert_eq!(num_expectation, tiles.filter_number(One));
+    }
+
+    #[test]
+    fn test_remove_from_tile_sequence() {
+        let tiles = TileSequenceType(vec![
+            RegularTile(Red, Twelve),
+            RegularTile(Blue, One),
+            RegularTile(Blue, One),
+            JokersWild,
+            RegularTile(Black, Ten),
+            RegularTile(Black, One),
+        ]);
+
+        let expected = vec![
+            RegularTile(Red, Twelve),
+            RegularTile(Blue, One),
+            RegularTile(Blue, One),
+            RegularTile(Black, Ten),
+            RegularTile(Black, One),
+        ];
+        assert_eq!(expected, tiles.remove(&vec![JokersWild]).expect("BROKEN"));
+
+        let expected = vec![
+            RegularTile(Red, Twelve),
+            RegularTile(Blue, One),
+            RegularTile(Blue, One),
+            JokersWild,
+            RegularTile(Black, Ten),
+            RegularTile(Black, One),
+        ];
+        assert_eq!(expected, tiles.remove(&vec![]).expect("BROKEN"));
+
+        let expected = vec![
+            RegularTile(Red, Twelve),
+            RegularTile(Blue, One),
+            JokersWild,
+            RegularTile(Black, Ten),
+            RegularTile(Black, One),
+        ];
+        assert_eq!(
+            expected,
+            tiles.remove(&vec![RegularTile(Blue, One)]).expect("BROKEN")
+        );
+
+        let expected = vec![
+            RegularTile(Red, Twelve),
+            JokersWild,
+            RegularTile(Black, Ten),
+            RegularTile(Black, One),
+        ];
+        assert_eq!(
+            expected,
+            tiles
+                .remove(&vec![RegularTile(Blue, One), RegularTile(Blue, One)])
+                .expect("BROKEN")
+        );
+
+        let expected = vec![
+            RegularTile(Red, Twelve),
+            RegularTile(Blue, One),
+            RegularTile(Blue, One),
+            JokersWild,
+            RegularTile(Black, Ten),
+            RegularTile(Black, One),
+        ];
+        assert_eq!(None, tiles.remove(&vec![RegularTile(Orange, Five)]));
+
+        let expected: TileSequence = vec![];
+        assert_eq!(expected, tiles.remove(&tiles).expect("BROKEN"));
     }
 }

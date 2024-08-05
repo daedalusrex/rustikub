@@ -169,7 +169,7 @@ impl Rack {
     /// An Error Will be returned if any of the requested tiles are not present in the Rack
     /// Relies on Traits!!
     pub fn remove(&self, items: &impl Decompose) -> Result<Self, RummikubError> {
-        // TODO re-implement the removal part in tileSequence or something
+        // TODO Update this to use tileSequenceType.remove().ok_or
         let tiles = items.decompose();
         let mut remaining = self.rack.clone();
         for tile in &tiles {

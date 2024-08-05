@@ -10,6 +10,7 @@ use colored::ColoredString;
 use colored::Colorize;
 use number::Number;
 use rand::seq::IteratorRandom;
+use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
 use strum::IntoEnumIterator;
 use tile_sequence::TileSequence;
@@ -63,10 +64,10 @@ impl Tile {
         return unique;
     }
 
-    pub fn is_color(&self, color: &Color) -> bool {
+    pub fn is_color(&self, color: Color) -> bool {
         match self {
             JokersWild => false,
-            RegularTile(c, _) => c == color,
+            RegularTile(c, _) => c == &color,
         }
     }
 
@@ -86,10 +87,10 @@ impl Tile {
         }
     }
 
-    pub fn is_number(&self, num: &Number) -> bool {
+    pub fn is_number(&self, num: Number) -> bool {
         match self {
             JokersWild => false,
-            RegularTile(_, n) => n == num,
+            RegularTile(_, n) => n == &num,
         }
     }
 
@@ -119,10 +120,10 @@ mod tile_tests {
     #[test]
     fn property_confirmation() {
         let some_tile = RegularTile(Red, Twelve);
-        assert!(some_tile.is_color(&Red));
-        assert_eq!(some_tile.is_color(&Black), false);
-        assert!(some_tile.is_number(&Twelve));
-        assert_eq!(some_tile.is_number(&One), false);
+        assert!(some_tile.is_color(Red));
+        assert_eq!(some_tile.is_color(Black), false);
+        assert!(some_tile.is_number(Twelve));
+        assert_eq!(some_tile.is_number(One), false);
         assert_eq!(some_tile.is_joker(), false);
         assert!(Tile::JokersWild.is_joker());
     }

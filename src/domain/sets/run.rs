@@ -74,7 +74,7 @@ impl Run {
         let mut start: Number = first;
 
         // Find that regular number's location in the candidates, anything other than 0 must be jokers
-        let first_position = candidates.iter().position(|t| t.is_number(&first))?;
+        let first_position = candidates.iter().position(|t| t.is_number(first))?;
         // If we have joker(s) in front, we need to begin our hypothetical run
         // at the number that the joke(r) represents
         for i in 0..first_position {

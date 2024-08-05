@@ -12,6 +12,7 @@ pub struct ScoreValue {
 
 impl ScoreValue {
     /// Creates an arbitrary score value from the provided integer
+    /// TODO add parameter for handling scoring on rack vs on the table
     pub const fn of(val: u16) -> ScoreValue {
         ScoreValue { total: val }
     }
