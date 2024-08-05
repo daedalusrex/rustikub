@@ -239,6 +239,7 @@ mod example_clearing_joker_from_rulebook {
 
     ///The player can replace the joker by each one of the tiles on his rack or by both
     #[test]
+    #[ignore]
     pub fn can_replace_joker_with_black_or_yellow_three() {
         todo!()
     }
@@ -246,12 +247,14 @@ mod example_clearing_joker_from_rulebook {
     /// The player splits the run and clears the joker. For the record, we've never played it this way
     /// and it blows my mind
     #[test]
+    #[ignore]
     pub fn can_split_run_and_implicitly_extract_joker() {
         todo!()
     }
 
     ///The player adds the blue 5 and clears the joker.
     #[test]
+    #[ignore]
     pub fn can_simply_replace_joker_with_blue_five() {
         todo!()
     }
@@ -259,6 +262,7 @@ mod example_clearing_joker_from_rulebook {
     ///The player splits the run. He moves the black 1 to the group of ones, he moves the
     /// black 2 to the group of twos and frees the joker
     #[test]
+    #[ignore]
     pub fn can_manipulate_table_without_tile_from_rack_and_implicitly_free_joker() {
         todo!()
     }

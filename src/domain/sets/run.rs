@@ -362,7 +362,7 @@ mod run_parsing {
         let first_tile = distinct_colors.first().unwrap().clone();
         if let RegularTile(color, num) = first_tile {
             // This failed once, at the expectation, but probably just the test code...
-            distinct_colors.push(RegularTile(color.next(), num.prev().expect("BOOM")));
+            distinct_colors.push(RegularTile(color.next(), num.prev().unwrap_or(One)));
             assert!(Run::parse(&distinct_colors).is_none());
         } else {
             assert!(false)
