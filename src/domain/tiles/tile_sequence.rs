@@ -44,10 +44,15 @@ pub struct TileSequenceType(pub Vec<Tile>);
 
 impl Decompose for TileSequenceType {
     fn decompose(&self) -> TileSequence {
-        return self.0.decompose();
+        self.0.decompose()
     }
 }
 impl TileSequenceType {
+    /// Simplified handy constructor for TileSequenceType
+    pub fn of(tiles: &impl Decompose) -> TileSequenceType {
+        TileSequenceType(tiles.decompose())
+    }
+
     /// Returns the same sequence of tiles, in order, but only with tiles that match the color
     pub fn filter_color(&self, color: Color) -> TileSequence {
         self.0

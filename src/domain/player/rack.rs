@@ -51,7 +51,7 @@ impl Ord for Rack {
 
 impl Decompose for Rack {
     fn decompose(&self) -> Vec<Tile> {
-        return self.rack.clone();
+        self.rack.clone()
     }
 }
 
@@ -168,18 +168,10 @@ impl Rack {
     /// This could be a Tile, or a Group, or a Run
     /// An Error Will be returned if any of the requested tiles are not present in the Rack
     /// Relies on Traits!!
-    pub fn remove(&self, items: &impl Decompose) -> Result<Self, RummikubError> {
-        // TODO Update this to use tileSequenceType.remove().ok_or
-        let tiles = items.decompose();
-        let mut remaining = self.rack.clone();
-        for tile in &tiles {
-            if !remaining.contains(tile) {
-                return Err(RummikubError);
-            }
-            let pos = remaining.iter().position(|r_tile| r_tile == tile);
-            let some_pos = pos.ok_or(RummikubError)?;
-            remaining.swap_remove(some_pos);
-        }
+    pub fn remove(&self, item: &impl Decompose) -> Result<Self, RummikubError> {
+        let rack_tiles = TileSequenceType::of(self);
+        let tiles_to_be_removed = item.decompose();
+        let mut remaining = rack_tiles.remove(item).ok_or(RummikubError)?;
         remaining.sort();
         Ok(Rack {
             rack: remaining,

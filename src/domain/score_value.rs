@@ -13,6 +13,7 @@ pub struct ScoreValue {
 impl ScoreValue {
     /// Creates an arbitrary score value from the provided integer
     /// TODO add parameter for handling scoring on rack vs on the table
+    ///     need that parameter, because score evaluation of state rules are different if joker on rack
     pub const fn of(val: u16) -> ScoreValue {
         ScoreValue { total: val }
     }
