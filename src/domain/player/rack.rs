@@ -141,19 +141,16 @@ impl Rack {
     /// Returns all Groups that are possible to create given the tiles currently present on the rack
     /// TODO Current Implementation Ignores Jokers
     pub fn groups_on_rack(&self) -> Vec<Group> {
-        // TODO move this to tile sequence as well
+        let mut remaining = TileSequenceType::of(self);
         let mut groups: Vec<Group> = vec![];
 
-        let mut reg_tiles = only_regular_tiles(&self.rack);
-        reg_tiles.sort();
-        // Power of derive is very cool
-        reg_tiles.dedup();
-        for num in Number::iter() {
-            let only_matching_nums: TileSequence =
-                TileSequenceType(reg_tiles.clone()).filter_number(num);
-            if let Some(found) = Group::parse(only_matching_nums) {
-                groups.push(found);
-            }
+        let mut optional_group = remaining.largest_group();
+        while let Some(ref largest_group) = optional_group {
+            groups.push(largest_group.clone());
+            remaining = remaining
+                .remove(largest_group)
+                .expect("Must be able to remove the found group");
+            optional_group = remaining.largest_group();
         }
         groups
     }
@@ -171,9 +168,9 @@ impl Rack {
         let rack_tiles = TileSequenceType::of(self);
         let tiles_to_be_removed = item.decompose();
         let mut remaining = rack_tiles.remove(item).ok_or(RummikubError)?;
-        remaining.sort();
+        remaining.0.sort();
         Ok(Rack {
-            rack: remaining,
+            rack: remaining.0,
             played_initial_meld: self.played_initial_meld,
         })
     }
@@ -292,10 +289,10 @@ mod basic_tests {
         };
         let found_groups = test_rack.groups_on_rack();
         let (found_sets, not_care_rack) = test_rack.sets_on_rack().unwrap();
-        assert_eq!(found_groups, vec![basic_group.clone(), other_group.clone()]);
+        assert_eq!(found_groups, vec![other_group.clone(), basic_group.clone()]);
         assert_eq!(
             found_sets,
-            vec![Set::Group(basic_group), Set::Group(other_group)]
+            vec![Set::Group(other_group), Set::Group(basic_group)]
         );
     }
 
@@ -324,8 +321,8 @@ mod basic_tests {
             vec![
                 Set::Run(one_to_six_black),
                 Set::Run(five_to_eight_blue),
+                Set::Group(other_group),
                 Set::Group(basic_group),
-                Set::Group(other_group)
             ]
         );
     }

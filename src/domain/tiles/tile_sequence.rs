@@ -91,12 +91,9 @@ impl TileSequenceType {
                     .collect::<Vec<Run>>(), // Not sure why needed but okay
             );
         }
-        let valid_runs: Vec<Run> = optional_runs
-            .iter()
-            .filter_map(|r| Some(r.clone()))
-            .collect();
+        let valid_runs = optional_runs.into_iter().filter_map(|r| Some(r)).collect();
         let largest_run = highest_value_collection(&valid_runs);
-        largest_run.and_then(|run| Some(run.clone()))
+        largest_run
     }
 
     pub fn largest_group(&self) -> Option<Group> {
@@ -118,7 +115,7 @@ impl TileSequenceType {
     /// Attempts to remove the given items from the tile sequence.
     /// Returns the new sequence if successful and None if not possible to remove
     /// Some(empty) is a valid response indicating all were removed
-    pub fn remove(&self, items: &impl Decompose) -> Option<TileSequence> {
+    pub fn remove(&self, items: &impl Decompose) -> Option<TileSequenceType> {
         let to_remove = items.decompose();
         let mut trimmed = self.0.clone();
 
@@ -130,7 +127,7 @@ impl TileSequenceType {
                 trimmed.remove(pos);
             }
         }
-        Some(trimmed)
+        Some(TileSequenceType::of(&trimmed))
     }
 }
 
@@ -234,7 +231,7 @@ mod sequence_tests {
         // let wowza = highest_value_collection(real_case);
         let twos = Group::of(Two, &vec![Red, Blue, Black]).expect("BROKEN");
         let fours = Group::of(Four, &vec![Red, Blue, Black]).expect("BROKEN");
-        let mut group_vec = vec![twos, fours.clone()];
+        let group_vec = vec![twos, fours.clone()];
         let actual = highest_value_collection(&group_vec);
         assert_eq!(Some(fours), actual);
         println!("actual: {:?}", actual);
@@ -279,7 +276,10 @@ mod sequence_tests {
             RegularTile(Black, Ten),
             RegularTile(Black, One),
         ];
-        assert_eq!(expected, tiles.remove(&vec![JokersWild]).expect("BROKEN"));
+        assert_eq!(
+            expected,
+            tiles.remove(&vec![JokersWild]).expect("BROKEN").decompose()
+        );
 
         let expected = vec![
             RegularTile(Red, Twelve),
@@ -289,7 +289,7 @@ mod sequence_tests {
             RegularTile(Black, Ten),
             RegularTile(Black, One),
         ];
-        assert_eq!(expected, tiles.remove(&vec![]).expect("BROKEN"));
+        assert_eq!(expected, tiles.remove(&vec![]).expect("BROKEN").decompose());
 
         let expected = vec![
             RegularTile(Red, Twelve),
@@ -300,7 +300,10 @@ mod sequence_tests {
         ];
         assert_eq!(
             expected,
-            tiles.remove(&vec![RegularTile(Blue, One)]).expect("BROKEN")
+            tiles
+                .remove(&vec![RegularTile(Blue, One)])
+                .expect("BROKEN")
+                .decompose()
         );
 
         let expected = vec![
@@ -314,6 +317,7 @@ mod sequence_tests {
             tiles
                 .remove(&vec![RegularTile(Blue, One), RegularTile(Blue, One)])
                 .expect("BROKEN")
+                .decompose()
         );
 
         let expected = vec![
@@ -324,10 +328,10 @@ mod sequence_tests {
             RegularTile(Black, Ten),
             RegularTile(Black, One),
         ];
-        assert_eq!(None, tiles.remove(&vec![RegularTile(Orange, Five)]));
+        assert!(tiles.remove(&vec![RegularTile(Orange, Five)]).is_none());
 
         let expected: TileSequence = vec![];
-        assert_eq!(expected, tiles.remove(&tiles).expect("BROKEN"));
+        assert_eq!(expected, tiles.remove(&tiles).expect("BROKEN").decompose());
     }
 
     #[test]
