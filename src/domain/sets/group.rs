@@ -23,7 +23,7 @@ pub struct Group {
 impl Group {
     /// Creates a group based on defining parameters as given
     /// Interprets duplicate colors as only one of that color
-    pub fn of(num: &Number, colors: &Vec<Color>) -> Option<Group> {
+    pub fn of(num: Number, colors: &Vec<Color>) -> Option<Group> {
         if colors.len() > MAX_GROUP_SIZE {
             return None;
         }
@@ -35,7 +35,7 @@ impl Group {
             return None;
         }
         Some(Group {
-            num: *num,
+            num,
             jokers: 0,
             colors: cols_set,
         })

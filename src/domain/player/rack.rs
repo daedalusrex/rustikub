@@ -141,6 +141,7 @@ impl Rack {
     /// Returns all Groups that are possible to create given the tiles currently present on the rack
     /// TODO Current Implementation Ignores Jokers
     pub fn groups_on_rack(&self) -> Vec<Group> {
+        // TODO move this to tile sequence as well
         let mut groups: Vec<Group> = vec![];
 
         let mut reg_tiles = only_regular_tiles(&self.rack);
@@ -159,9 +160,7 @@ impl Rack {
 
     /// Returns the run with the largest score value on the rack if it exists.
     pub fn get_largest_run(&self) -> Option<Run> {
-        // Ignores Jokers, for now...
-        let tiles = TileSequenceType(self.rack.clone());
-        tiles.largest_possible_run()
+        TileSequenceType::of(self).largest_possible_run()
     }
 
     /// Removes the given vector of tiles from the rack and returns a new version
@@ -280,8 +279,8 @@ mod basic_tests {
 
     #[test]
     fn correct_detection_of_groups_simple() {
-        let basic_group = Group::of(&Five, &vec![Black, Blue, Red]).unwrap();
-        let other_group = Group::of(&Twelve, &vec![Red, Black, Orange]).unwrap();
+        let basic_group = Group::of(Five, &vec![Black, Blue, Red]).unwrap();
+        let other_group = Group::of(Twelve, &vec![Red, Black, Orange]).unwrap();
 
         let mut correct_tiles = vec![];
         correct_tiles.append(basic_group.decompose().as_mut());
@@ -304,8 +303,8 @@ mod basic_tests {
     pub fn detection_run_and_group() {
         let one_to_six_black = Run::of(One, Black, 6).unwrap();
         let five_to_eight_blue = Run::of(Five, Blue, 3).unwrap();
-        let basic_group = Group::of(&Five, &vec![Black, Blue, Red]).unwrap();
-        let other_group = Group::of(&Twelve, &vec![Red, Black, Orange]).unwrap();
+        let basic_group = Group::of(Five, &vec![Black, Blue, Red]).unwrap();
+        let other_group = Group::of(Twelve, &vec![Red, Black, Orange]).unwrap();
 
         let mut tiles = vec![];
         tiles.append(one_to_six_black.decompose().as_mut());

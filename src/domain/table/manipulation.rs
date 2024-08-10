@@ -11,6 +11,7 @@ use crate::domain::Decompose;
 pub fn rearrange(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
     // TODO add some kind of grand decomposition, and then recompose the table set by set
     // should be quite similar to what rack does, but on a grander scale. (ignoring the joker)
+    // Todo recombobulation, and then constraint application
     let mut sets: Vec<Set> = vec![];
     let mut tiles: TileSequenceType = TileSequenceType(rack.decompose());
 
@@ -70,7 +71,7 @@ mod example_manipulation_tests_from_rulebook {
             Rack::new(&vec![RegularTile(Blue, Three), RegularTile(Blue, Eight)]).expect("TEST");
         let example_table: FaceUpTiles = FaceUpTiles {
             sets: vec![
-                Group(Group::of(&Eight, &vec![Red, Orange, Black]).expect("TEST")),
+                Group(Group::of(Eight, &vec![Red, Orange, Black]).expect("TEST")),
                 Run(Run::of(Four, Blue, 3).expect("TEST")),
             ],
         };
@@ -80,7 +81,7 @@ mod example_manipulation_tests_from_rulebook {
         assert!(actual.is_some());
         let expected_table = FaceUpTiles {
             sets: vec![
-                Group(Group::of(&Eight, &vec![Red, Orange, Black, Blue]).expect("TEST")),
+                Group(Group::of(Eight, &vec![Red, Orange, Black, Blue]).expect("TEST")),
                 Run(Run::of(Three, Blue, 4).expect("TEST")),
             ],
         };
@@ -102,13 +103,13 @@ mod example_manipulation_tests_from_rulebook {
 
         let test_table = FaceUpTiles {
             sets: vec![Group(
-                Group::of(&Four, &vec![Red, Orange, Black, Blue]).expect("TEST"),
+                Group::of(Four, &vec![Red, Orange, Black, Blue]).expect("TEST"),
             )],
         };
 
         let expected_table = FaceUpTiles {
             sets: vec![Group(
-                Group::of(&Four, &vec![Red, Orange, Black, Blue]).expect("TEST"),
+                Group::of(Four, &vec![Red, Orange, Black, Blue]).expect("TEST"),
             )],
         };
         let actual = rearrange(&test_rack, &test_table);
@@ -140,7 +141,7 @@ mod example_manipulation_tests_from_rulebook {
         let expected_table = FaceUpTiles {
             sets: vec![
                 Run(Run::of(Nine, Blue, 4).expect("TEST")),
-                Group(Group::of(&Eight, &vec![Orange, Black, Blue]).expect("TEST")),
+                Group(Group::of(Eight, &vec![Orange, Black, Blue]).expect("TEST")),
             ],
         };
         assert!(actual_rack.is_empty());
@@ -179,7 +180,7 @@ mod example_manipulation_tests_from_rulebook {
         let test_table = FaceUpTiles {
             sets: vec![
                 Run(Run::of(One, Orange, 4).expect("TEST")),
-                Group(Group::of(&One, &vec![Blue, Black, Red, Orange]).expect("TEST")),
+                Group(Group::of(One, &vec![Blue, Black, Red, Orange]).expect("TEST")),
             ],
         };
 
@@ -190,8 +191,8 @@ mod example_manipulation_tests_from_rulebook {
         let expected_table = FaceUpTiles {
             sets: vec![
                 Run(Run::of(Two, Orange, 3).expect("TEST")),
-                Group(Group::of(&One, &vec![Black, Blue, Orange]).expect("TEST")),
-                Group(Group::of(&One, &vec![Blue, Red, Orange]).expect("TEST")),
+                Group(Group::of(One, &vec![Black, Blue, Orange]).expect("TEST")),
+                Group(Group::of(One, &vec![Blue, Red, Orange]).expect("TEST")),
             ],
         };
         assert!(actual_rack.is_empty());
@@ -219,9 +220,9 @@ mod example_manipulation_tests_from_rulebook {
         let (actual_rack, actual_table) = actual.expect("TEST");
         let expected_table = FaceUpTiles {
             sets: vec![
-                Group(Group::of(&Five, &vec![Blue, Orange, Red, Black]).expect("TEST")),
-                Group(Group::of(&Six, &vec![Orange, Red, Black]).expect("TEST")),
-                Group(Group::of(&Seven, &vec![Orange, Red, Black]).expect("TEST")),
+                Group(Group::of(Five, &vec![Blue, Orange, Red, Black]).expect("TEST")),
+                Group(Group::of(Six, &vec![Orange, Red, Black]).expect("TEST")),
+                Group(Group::of(Seven, &vec![Orange, Red, Black]).expect("TEST")),
                 Run(Run::of(Five, Black, 5).expect("TEST")),
             ],
         };

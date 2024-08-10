@@ -212,8 +212,8 @@ mod sequence_tests {
         // let real_group = Group::of(&Two, &vec![Red, Blue, Black]).expect("BROKEN");
         // let real_case: Vec<Box<&dyn Decompose>> = vec![Box::new(&base_case), Box::new(&real_group)];
         // let wowza = highest_value_collection(real_case);
-        let twos = Group::of(&Two, &vec![Red, Blue, Black]).expect("BROKEN");
-        let fours = Group::of(&Four, &vec![Red, Blue, Black]).expect("BROKEN");
+        let twos = Group::of(Two, &vec![Red, Blue, Black]).expect("BROKEN");
+        let fours = Group::of(Four, &vec![Red, Blue, Black]).expect("BROKEN");
         let mut group_vec = vec![twos, fours.clone()];
         let actual = highest_value_collection(&mut group_vec);
         assert_eq!(Some(&fours), actual);

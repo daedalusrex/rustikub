@@ -35,7 +35,7 @@ impl Run {
             return None;
         }
         let mut end = start;
-        for _ in 0..len {
+        for _ in 0..len - 1 {
             end = end.next()?
         }
         Some(Run {
@@ -430,8 +430,9 @@ mod run_parsing {
 #[cfg(test)]
 mod other_tests_of_runs {
     use super::*;
+    use crate::domain::sets::group::Group;
     use crate::domain::sets::ParseError::*;
-    use crate::domain::tiles::color::Color::Red;
+    use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number::*;
     use crate::domain::tiles::Tile::RegularTile;
 
@@ -515,5 +516,21 @@ mod other_tests_of_runs {
             // this long indicates it's stuck in an infinite loop
             panic!("Parse test took way too long! There must be an infinite loop!")
         }
+    }
+
+    #[test]
+    pub fn of_cardinality() {
+        let run = Run::of(One, Blue, 3).expect("BROKEN");
+        let mut expected: TileSequence = vec![
+            RegularTile(Blue, One),
+            RegularTile(Blue, Two),
+            RegularTile(Blue, Three),
+        ];
+        expected.sort();
+        let mut actual = run.decompose();
+        actual.sort();
+
+        assert_eq!(actual.len(), 3);
+        assert_eq!(expected, actual);
     }
 }

@@ -13,6 +13,8 @@ pub struct FaceUpTiles {
     pub sets: Vec<Set>,
 }
 
+use crate::domain::tiles::tile_sequence::TileSequence;
+use crate::domain::{Count, Decompose, RummikubError};
 use colored;
 use colored::{ColoredString, Colorize};
 
@@ -23,6 +25,16 @@ impl Display for FaceUpTiles {
             write!(f, "{}\n", s).expect(&foo)
         }
         Ok(())
+    }
+}
+
+impl Decompose for FaceUpTiles {
+    fn decompose(&self) -> Vec<Tile> {
+        let mut tiles: TileSequence = vec![];
+        for set in &self.sets {
+            tiles.append(set.decompose().as_mut())
+        }
+        tiles
     }
 }
 
@@ -101,5 +113,41 @@ impl FaceUpTiles {
     /// Privately modifies self to add a new set
     fn place_set(&mut self, set: Set) {
         self.sets.push(set);
+    }
+}
+
+#[cfg(test)]
+mod basic_face_up_tests {
+    use super::*;
+    use crate::domain::sets::group::Group;
+    use crate::domain::sets::run::Run;
+    use crate::domain::tiles::color::Color::*;
+    use crate::domain::tiles::number::Number::*;
+    use crate::domain::tiles::Tile::RegularTile;
+
+    #[test]
+    pub fn decompose_works() {
+        let run = Run::of(One, Blue, 3).expect("BROKEN");
+        let group = Group::of(Two, &vec![Blue, Black, Orange]).expect("BROKEN");
+
+        let mut face_up = FaceUpTiles::new();
+        face_up.sets.push(Set::Group(group));
+        face_up.sets.push(Set::Run(run));
+
+        let mut actual = face_up.decompose();
+        actual.sort();
+
+        let mut expected: TileSequence = vec![
+            RegularTile(Blue, One),
+            RegularTile(Blue, Two),
+            RegularTile(Blue, Three),
+            RegularTile(Blue, Two),
+            RegularTile(Black, Two),
+            RegularTile(Orange, Two),
+        ];
+        expected.sort();
+
+        assert_eq!(actual.len(), 6);
+        assert_eq!(expected, actual);
     }
 }

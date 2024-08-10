@@ -1,4 +1,4 @@
-#[deny(dead_code, unused_imports, unused_variables)]
+#[deny(unused_imports, unused_variables)]
 pub mod color;
 #[deny(dead_code, unused_imports, unused_variables)]
 pub mod number;
