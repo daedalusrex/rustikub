@@ -17,11 +17,11 @@ use crate::domain::Decompose;
 pub type TileSequence = Vec<Tile>;
 
 pub fn only_regular_tiles(tiles: &TileSequence) -> TileSequence {
-    return tiles
+    tiles
         .iter()
         .filter(|t| t.is_regular())
         .map(|t| t.clone())
-        .collect();
+        .collect()
 }
 
 pub fn unique_colors(tiles: &TileSequence) -> HashSet<Color> {
@@ -91,12 +91,28 @@ impl TileSequenceType {
                     .collect::<Vec<Run>>(), // Not sure why needed but okay
             );
         }
-        let mut valid_runs: Vec<Run> = optional_runs
+        let valid_runs: Vec<Run> = optional_runs
             .iter()
             .filter_map(|r| Some(r.clone()))
             .collect();
-        let largest_run = highest_value_collection(&mut valid_runs);
+        let largest_run = highest_value_collection(&valid_runs);
         largest_run.and_then(|run| Some(run.clone()))
+    }
+
+    pub fn largest_group(&self) -> Option<Group> {
+        let mut optional_groups: Vec<Option<Group>> = vec![];
+        for num in Number::iter() {
+            let mut all_match_num = self.filter_number(num);
+            all_match_num.dedup();
+            optional_groups.push(Group::parse(all_match_num));
+        }
+        let largest_group = highest_value_collection(
+            &optional_groups
+                .into_iter()
+                .flatten() // flatten is more concise .filter_map(|g| g)
+                .collect::<Vec<Group>>(),
+        );
+        largest_group
     }
 
     /// Attempts to remove the given items from the tile sequence.
@@ -137,7 +153,10 @@ where
 
 /// Ranks a given set of Tile Sequences (or what have you) by their Scores
 /// Highest Value is first.
-pub fn highest_value_collection<T: Decompose>(collections: &mut Vec<T>) -> Option<&T> {
+pub fn highest_value_collection<T: Decompose>(collections: &Vec<T>) -> Option<T>
+where
+    T: Clone,
+{
     // An inner function, No need for a closure since it doesn't use anything in the outer scope
     fn ordering_closure<T: Decompose>(_self: &T, _other: &T) -> Ordering {
         // I don't know what && means, but ChatGPT says it works so....
@@ -146,8 +165,9 @@ pub fn highest_value_collection<T: Decompose>(collections: &mut Vec<T>) -> Optio
         return Ord::cmp(&self_score, &other_score);
     }
 
-    collections.sort_by(ordering_closure);
-    collections.last()
+    let mut sortable = collections.clone();
+    sortable.sort_by(ordering_closure);
+    sortable.last().cloned()
 }
 
 #[cfg(test)]
@@ -203,9 +223,9 @@ mod sequence_tests {
     #[test]
     fn rank_collections_correctly() {
         let base_case = RegularTile(Blue, One);
-        let mut base_vec = vec![base_case];
-        let actual = highest_value_collection(&mut base_vec);
-        assert_eq!(Some(&base_case), actual);
+        let base_vec = vec![base_case];
+        let actual = highest_value_collection(&base_vec);
+        assert_eq!(Some(base_case), actual);
         println!("actual: {:?}", actual);
         // TODO some day, dynamic arrays of boxes would be cool
         // require Box<dyn Trait>
@@ -215,8 +235,8 @@ mod sequence_tests {
         let twos = Group::of(Two, &vec![Red, Blue, Black]).expect("BROKEN");
         let fours = Group::of(Four, &vec![Red, Blue, Black]).expect("BROKEN");
         let mut group_vec = vec![twos, fours.clone()];
-        let actual = highest_value_collection(&mut group_vec);
-        assert_eq!(Some(&fours), actual);
+        let actual = highest_value_collection(&group_vec);
+        assert_eq!(Some(fours), actual);
         println!("actual: {:?}", actual);
     }
 
@@ -308,5 +328,24 @@ mod sequence_tests {
 
         let expected: TileSequence = vec![];
         assert_eq!(expected, tiles.remove(&tiles).expect("BROKEN"));
+    }
+
+    #[test]
+    fn test_largest_group() {
+        let tiles = TileSequenceType(vec![
+            RegularTile(Red, One),
+            RegularTile(Blue, One),
+            RegularTile(Black, One),
+            RegularTile(Orange, One),
+            RegularTile(Red, Ten),
+            RegularTile(Orange, Ten),
+            RegularTile(Black, Ten),
+        ]);
+
+        let actual = tiles.largest_group();
+
+        let expectation = Group::of(Ten, &vec![Orange, Red, Black]).expect("BROKEN");
+        assert!(actual.is_some());
+        assert_eq!(expectation, actual.expect("BROKEN"));
     }
 }
