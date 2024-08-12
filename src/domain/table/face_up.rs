@@ -96,7 +96,7 @@ impl FaceUpTiles {
         }
 
         if tile_was_added {
-            return Some(FaceUpTiles { sets: mut_sets });
+            Some(FaceUpTiles { sets: mut_sets })
         } else {
             None
         }

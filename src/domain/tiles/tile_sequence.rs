@@ -33,7 +33,7 @@ pub fn unique_colors(tiles: &TileSequence) -> HashSet<Color> {
 
 impl Decompose for TileSequence {
     fn decompose(&self) -> TileSequence {
-        return self.clone();
+        self.clone()
     }
 }
 
@@ -75,7 +75,7 @@ impl TileSequenceType {
     /// Exactly the same as the Rack get_largest_run, but New!
     /// Also public.
     /// TODO Current Implementation Ignores Jokers  -> Fix will be to increase search space by inserting them
-    pub fn largest_possible_run(&self) -> Option<Run> {
+    pub fn largest_run(&self) -> Option<Run> {
         let mut optional_runs: Vec<Run> = vec![];
         // don't need to remove regular tiles cuz of cool iters above
         for color in Color::iter() {

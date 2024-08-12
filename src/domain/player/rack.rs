@@ -157,7 +157,7 @@ impl Rack {
 
     /// Returns the run with the largest score value on the rack if it exists.
     pub fn get_largest_run(&self) -> Option<Run> {
-        TileSequenceType::of(self).largest_possible_run()
+        TileSequenceType::of(self).largest_run()
     }
 
     /// Removes the given vector of tiles from the rack and returns a new version
