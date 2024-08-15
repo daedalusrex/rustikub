@@ -56,11 +56,14 @@ impl Decompose for Rack {
 }
 
 impl Rack {
-    pub fn new(tiles: &TileSequence) -> Result<Rack, RummikubError> {
+    pub fn new(
+        tiles: &TileSequence,
+        played_initial_meld: Option<bool>,
+    ) -> Result<Rack, RummikubError> {
         tiles.count()?;
         Ok(Rack {
             rack: tiles.clone(),
-            played_initial_meld: false,
+            played_initial_meld: played_initial_meld.unwrap_or(false),
         })
     }
 
@@ -174,27 +177,6 @@ impl Rack {
             played_initial_meld: self.played_initial_meld,
         })
     }
-
-    // TODO Remove this, after basic rearrange picks up functionality of just add one
-    // pub fn rearrange_and_place(&self, face_up: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
-    //     let mut mut_face_up = face_up.clone();
-    //     let tiles_to_attempt = self.decompose();
-    //     let mut mut_rack = self.clone();
-    //     let mut change_occurred = false;
-    //
-    //     for attempt in tiles_to_attempt {
-    //         if let Some(place_success) = mut_face_up.place_new_tile(&attempt) {
-    //             mut_face_up = place_success;
-    //             mut_rack = mut_rack.remove(&attempt).unwrap();
-    //             change_occurred = true;
-    //         }
-    //     }
-    // //     return if change_occurred {
-    //         Some((mut_rack, mut_face_up))
-    //     } else {
-    //         None
-    //     };
-    // }
 
     // TODO make return new rack for consistent style
     pub fn add_tile_to_rack(&mut self, tile: &Tile) {

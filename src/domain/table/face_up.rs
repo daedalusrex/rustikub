@@ -102,6 +102,9 @@ impl FaceUpTiles {
         }
     }
 
+    // fn simple_add_tile(&self, candidate: &Tile) -> Option<FaceUpTiles> {
+
+
     pub fn place_new_sets(&self, sets: &Vec<Set>) -> FaceUpTiles {
         let mut new_face_up = self.clone();
         for set in sets {

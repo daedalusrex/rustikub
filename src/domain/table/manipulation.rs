@@ -10,12 +10,31 @@ use crate::domain::{Count, Decompose};
 /// indicating no change could be made
 
 pub fn rearrange(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
-    let (remaining, new_table) = shatter_and_recombobulate(rack, table)?;
-    let new_rack = Rack {
-        rack: remaining.0,
-        played_initial_meld: rack.played_initial_meld,
-    };
-    Some((new_rack, new_table))
+    // Place New Tiles simple
+    let mut mut_face_up = table.clone();
+    let mut remaining = TileSequenceType::of(&rack.decompose());
+
+    for attempt in remaining.decompose() {
+        if let Some(place_success) = mut_face_up.place_new_tile(&attempt) {
+            mut_face_up = place_success;
+            remaining = remaining.remove(&attempt)?;
+        }
+    }
+    if remaining.count().ok()? < rack.count().ok()? {
+        return Some((
+            Rack::new(&remaining.0, Some(rack.played_initial_meld)).ok()?,
+            mut_face_up,
+        ));
+    }
+    None
+
+    // Shatter Algo is not very good at all
+    // let (remaining, new_table) = shatter_and_recombobulate(rack, table)?;
+    // let new_rack = Rack {
+    //     rack: remaining.0,
+    //     played_initial_meld: rack.played_initial_meld,
+    // };
+    // Some((new_rack, new_table))
 
     // TODO blah blah blah deal with all these comments later
     // TODO add some kind of grand decomposition, and then recompose the table set by set
@@ -125,12 +144,15 @@ mod example_manipulation_tests_from_rulebook {
     /// group of 8’s already on the table.
     #[test]
     pub fn add_tile_to_make_new_set() {
-        let example_rack =
-            Rack::new(&vec![RegularTile(Blue, Three), RegularTile(Blue, Eight)]).expect("TEST");
+        let example_rack = Rack::new(
+            &vec![RegularTile(Blue, Three), RegularTile(Blue, Eight)],
+            None,
+        )
+        .expect("TEST");
         let example_table: FaceUpTiles = FaceUpTiles {
             sets: vec![
-                Group(Group::of(Eight, &vec![Red, Orange, Black]).expect("TEST")),
                 Run(Run::of(Four, Blue, 3).expect("TEST")),
+                Group(Group::of(Eight, &vec![Red, Orange, Black]).expect("TEST")),
             ],
         };
 
@@ -153,12 +175,15 @@ mod example_manipulation_tests_from_rulebook {
     /// from the group of four on the table and lays the run: blue 3,4,5,6.
     #[test]
     pub fn remove_and_use_fourth_to_create_new_set() {
-        let test_rack = Rack::new(&vec![
-            RegularTile(Blue, Three),
-            RegularTile(Blue, Five),
-            RegularTile(Blue, Six),
-        ])
-            .expect("TEST");
+        let test_rack = Rack::new(
+            &vec![
+                RegularTile(Blue, Three),
+                RegularTile(Blue, Five),
+                RegularTile(Blue, Six),
+            ],
+            None,
+        )
+        .expect("TEST");
 
         let test_table = FaceUpTiles {
             sets: vec![Group(
@@ -182,12 +207,15 @@ mod example_manipulation_tests_from_rulebook {
     /// The player adds a blue 11 to the run and uses the 8’s to form a new group
     #[test]
     pub fn add_fourth_and_remove_tile_to_create_new_set() {
-        let test_rack = Rack::new(&vec![
-            RegularTile(Blue, Eleven),
-            RegularTile(Black, Eight),
-            RegularTile(Orange, Eight),
-        ])
-            .expect("TEST");
+        let test_rack = Rack::new(
+            &vec![
+                RegularTile(Blue, Eleven),
+                RegularTile(Black, Eight),
+                RegularTile(Orange, Eight),
+            ],
+            None,
+        )
+        .expect("TEST");
 
         let test_table = FaceUpTiles {
             sets: vec![Run(Run::of(Eight, Blue, 3).expect("TEST"))],
@@ -210,7 +238,7 @@ mod example_manipulation_tests_from_rulebook {
     /// Splitting a run, The player splits the run and uses the red 6 to form two new runs.
     #[test]
     pub fn splitting_a_run() {
-        let test_rack = Rack::new(&vec![RegularTile(Red, Six)]).expect("TEST");
+        let test_rack = Rack::new(&vec![RegularTile(Red, Six)], None).expect("TEST");
 
         let test_table = FaceUpTiles {
             sets: vec![Run(Run::of(Four, Red, 5).expect("TEST"))],
@@ -234,7 +262,7 @@ mod example_manipulation_tests_from_rulebook {
     /// the group to form a new group.
     #[test]
     pub fn combined_split() {
-        let test_rack = Rack::new(&vec![RegularTile(Blue, One)]).expect("TEST");
+        let test_rack = Rack::new(&vec![RegularTile(Blue, One)], None).expect("TEST");
 
         let test_table = FaceUpTiles {
             sets: vec![
@@ -262,8 +290,11 @@ mod example_manipulation_tests_from_rulebook {
     /// the blue 5 from the rack to make three groups and one new run.
     #[test]
     pub fn multiple_split() {
-        let test_rack =
-            Rack::new(&vec![RegularTile(Black, Ten), RegularTile(Blue, Five)]).expect("TEST");
+        let test_rack = Rack::new(
+            &vec![RegularTile(Black, Ten), RegularTile(Blue, Five)],
+            None,
+        )
+        .expect("TEST");
 
         let test_table = FaceUpTiles {
             sets: vec![
