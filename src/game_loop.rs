@@ -66,7 +66,7 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             mut_table.boneyard = new_bones;
         } else {
             //TODO technically this should not happen, but can if players do not play well or hold on forever
-            println!("All Tiles have been Drawn! Game Over!");
+            println!("\n--> All Tiles have been Drawn! Game Over!\n");
             // TODO again, taking a shortcut here
             mut_rack = Rack {
                 rack: vec![],

@@ -92,7 +92,7 @@ impl Number {
             Twelve => 12,
             Thirteen => 13,
         };
-        ScoreValue::of(total)
+        ScoreValue::of_u16(total)
     }
 }
 

@@ -3,14 +3,15 @@ use std::collections::HashSet;
 
 use strum::IntoEnumIterator;
 
-use crate::domain::score_value::ScoreValue;
+use crate::domain::score_value::ScoringRule::{OnRack, OnTable};
+use crate::domain::score_value::{ScoreValue, ScoringRule};
 use crate::domain::sets::group::Group;
 use crate::domain::sets::run::Run;
 use crate::domain::tiles::color::Color;
 use crate::domain::tiles::number::Number;
 use crate::domain::tiles::Tile;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-use crate::domain::Decompose;
+use crate::domain::{Decompose, RummikubError};
 
 // https://doc.rust-lang.org/beta/reference/items/type-aliases.html
 /// TYPE ALIAS: An Ordered Sequence of Tiles, such that rearranging it would change it's meaning
@@ -35,6 +36,17 @@ impl Decompose for TileSequence {
     fn decompose(&self) -> TileSequence {
         self.clone()
     }
+
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+        match rule {
+            OnTable => Err(RummikubError),
+            OnRack => Ok(ScoreValue::of(
+                self.iter()
+                    .map(|t| t.score(OnRack).unwrap().as_u16())
+                    .sum::<u16>(),
+            ))?,
+        }
+    }
 }
 
 // An alternative implementation using the "New Type Idiom"
@@ -45,6 +57,10 @@ pub struct TileSequenceType(pub Vec<Tile>);
 impl Decompose for TileSequenceType {
     fn decompose(&self) -> TileSequence {
         self.0.decompose()
+    }
+
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+        self.0.score(rule)
     }
 }
 impl TileSequenceType {
@@ -92,7 +108,7 @@ impl TileSequenceType {
             );
         }
         let valid_runs = optional_runs.into_iter().filter_map(|r| Some(r)).collect();
-        let largest_run = highest_value_collection(&valid_runs);
+        let largest_run = highest_value_collection(&valid_runs, ScoringRule::default());
         largest_run
     }
 
@@ -108,6 +124,7 @@ impl TileSequenceType {
                 .into_iter()
                 .flatten() // flatten is more concise .filter_map(|g| g)
                 .collect::<Vec<Group>>(),
+            ScoringRule::default(),
         );
         largest_group
     }
@@ -150,25 +167,22 @@ where
 
 /// Ranks a given set of Tile Sequences (or what have you) by their Scores
 /// Highest Value is first.
-pub fn highest_value_collection<T: Decompose>(collections: &Vec<T>) -> Option<T>
+pub fn highest_value_collection<T: Decompose>(collections: &Vec<T>, rule: ScoringRule) -> Option<T>
 where
     T: Clone,
 {
-    // An inner function, No need for a closure since it doesn't use anything in the outer scope
-    fn ordering_closure<T: Decompose>(_self: &T, _other: &T) -> Ordering {
-        // I don't know what && means, but ChatGPT says it works so....
-        let self_score = ScoreValue::add_em_up(&_self.decompose());
-        let other_score = ScoreValue::add_em_up(&_other.decompose());
-        return Ord::cmp(&self_score, &other_score);
-    }
-
+    // Must use an actual closure since relies on the rule from the outer scope
+    let ordering_closure = |left: &T, right: &T| -> Ordering {
+        Ord::cmp(&left.score(rule).unwrap(), &right.score(rule).unwrap())
+    };
     let mut sortable = collections.clone();
-    sortable.sort_by(ordering_closure);
+    sortable.sort_by(ordering_closure); // Magic
     sortable.last().cloned()
 }
 
 #[cfg(test)]
 mod sequence_tests {
+    use crate::domain::score_value::JOKER_RACK_SCORE;
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number::*;
 
@@ -221,7 +235,7 @@ mod sequence_tests {
     fn rank_collections_correctly() {
         let base_case = RegularTile(Blue, One);
         let base_vec = vec![base_case];
-        let actual = highest_value_collection(&base_vec);
+        let actual = highest_value_collection(&base_vec, ScoringRule::default());
         assert_eq!(Some(base_case), actual);
         println!("actual: {:?}", actual);
         // TODO some day, dynamic arrays of boxes would be cool
@@ -232,7 +246,7 @@ mod sequence_tests {
         let twos = Group::of(Two, &vec![Red, Blue, Black]).expect("BROKEN");
         let fours = Group::of(Four, &vec![Red, Blue, Black]).expect("BROKEN");
         let group_vec = vec![twos, fours.clone()];
-        let actual = highest_value_collection(&group_vec);
+        let actual = highest_value_collection(&group_vec, ScoringRule::default());
         assert_eq!(Some(fours), actual);
         println!("actual: {:?}", actual);
     }
@@ -351,5 +365,30 @@ mod sequence_tests {
         let expectation = Group::of(Ten, &vec![Orange, Red, Black]).expect("BROKEN");
         assert!(actual.is_some());
         assert_eq!(expectation, actual.expect("BROKEN"));
+    }
+
+    #[test]
+    fn test_scoring_tile_sequence() {
+        let tiles: TileSequence = vec![
+            RegularTile(Red, One),
+            RegularTile(Blue, Three),
+            RegularTile(Black, Five),
+            RegularTile(Orange, One),
+            RegularTile(Red, Seven),
+            RegularTile(Orange, Ten),
+            RegularTile(Black, Thirteen),
+            JokersWild,
+        ];
+        let actual: ScoreValue = tiles.score(OnRack).unwrap();
+
+        let expected: u16 = 1 + 3 + 5 + 1 + 7 + 10 + 13;
+        assert_eq!(ScoreValue::of_u16(expected) + JOKER_RACK_SCORE, actual);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_scoring_tile_sequence_fail_ontable() {
+        let tiles: TileSequence = vec![RegularTile(Red, One), JokersWild];
+        let actual: ScoreValue = tiles.score(OnTable).unwrap();
     }
 }

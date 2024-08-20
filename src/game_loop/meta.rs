@@ -1,4 +1,7 @@
 use crate::domain::player::Player;
+use crate::domain::score_value::ScoreValue;
+use crate::domain::score_value::ScoringRule::OnRack;
+use crate::domain::Decompose;
 use std::fmt;
 use std::fmt::Formatter;
 
@@ -15,7 +18,10 @@ impl fmt::Display for GameOutcome {
             "Winner is: {}! Highest Score at End Game(THE LOSER) was {} with {} pts",
             self.winner.info,
             self.loser.info,
-            self.loser.rack.total_value()
+            self.loser
+                .rack
+                .score(OnRack)
+                .unwrap_or(ScoreValue::of_u16(u16::MAX))
         )
     }
 }

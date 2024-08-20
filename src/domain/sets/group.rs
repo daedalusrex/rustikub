@@ -1,11 +1,13 @@
-use crate::domain::score_value::ScoreValue;
+use crate::domain::score_value::ScoringRule::OnRack;
+use crate::domain::score_value::{ScoreValue, ScoringRule};
 use crate::domain::tiles::color::Color;
 use crate::domain::tiles::number::Number;
 use crate::domain::tiles::Tile;
 use crate::domain::tiles::Tile::RegularTile;
-use crate::domain::Decompose;
+use crate::domain::{Count, Decompose, RummikubError};
 use std::collections::HashSet;
 use std::fmt::Display;
+use ScoringRule::OnTable;
 use Tile::JokersWild;
 
 const MAX_GROUP_SIZE: usize = 4;
@@ -86,10 +88,6 @@ impl Group {
         })
     }
 
-    pub fn count(&self) -> u8 {
-        self.colors.len() as u8 + self.jokers
-    }
-
     pub fn contains(&self, c: &Color) -> bool {
         // TODO Jokers?
         self.colors.contains(&c)
@@ -97,11 +95,6 @@ impl Group {
 
     pub fn get_group_num(&self) -> Number {
         self.num
-    }
-
-    pub fn total_value(&self) -> ScoreValue {
-        let one_num = self.num.as_value();
-        one_num * (self.jokers as u16 + self.colors.len() as u16)
     }
 
     pub fn add_tile(&self, tile: &Tile) -> Option<Group> {
@@ -140,12 +133,22 @@ impl Decompose for Group {
     fn decompose(&self) -> Vec<Tile> {
         let mut composite_tiles: Vec<Tile> = vec![];
         for joker in 0..self.jokers {
-            composite_tiles.push(JokersWild.clone());
+            composite_tiles.push(JokersWild);
         }
         for color in &self.colors {
-            composite_tiles.push(RegularTile(color.clone(), self.num.clone()))
+            composite_tiles.push(RegularTile(*color, self.num))
         }
         composite_tiles
+    }
+
+    fn count(&self) -> Result<Count, RummikubError> {
+        Ok(Count(self.colors.len() as u8 + self.jokers))
+    }
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+        match rule {
+            OnRack => self.decompose().score(OnRack),
+            OnTable => Ok(self.num.as_value() * self.count()?.0 as u16),
+        }
     }
 }
 
@@ -173,7 +176,7 @@ pub mod group_tests {
         let success = object_mother_good_group_of_three();
         assert_ne!(None, Group::parse(success.clone()));
         if let Some(good_group) = Group::parse(success.clone()) {
-            assert_eq!(success.len() as u8, good_group.count());
+            assert_eq!(success.len() as u8, good_group.count().unwrap().0);
             if let Some(RegularTile(_, num)) = success.first() {
                 assert_eq!(num, &good_group.num)
             } else {
@@ -275,7 +278,14 @@ pub mod group_tests {
             JokersWild,
         ])
             .unwrap();
-        assert_eq!(ScoreValue::of(15), known_group.total_value())
+        assert_eq!(
+            ScoreValue::of_u16(15u16),
+            known_group.score(OnTable).unwrap()
+        );
+        assert_eq!(
+            ScoreValue::of_u16(40u16),
+            known_group.score(OnRack).unwrap()
+        );
     }
 
     #[test]

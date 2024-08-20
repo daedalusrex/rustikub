@@ -1,13 +1,15 @@
 use super::ParseError::*;
-use crate::domain::score_value::ScoreValue;
+use crate::domain::score_value::ScoringRule::OnRack;
+use crate::domain::score_value::{ScoreValue, ScoringRule};
 use crate::domain::tiles::color::Color;
 use crate::domain::tiles::number::Number;
 use crate::domain::tiles::tile_sequence::{unique_colors, TileSequence};
 use crate::domain::tiles::Tile;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
-use crate::domain::Decompose;
+use crate::domain::{Decompose, RummikubError};
 use std::collections::HashSet;
 use std::vec;
+use ScoringRule::OnTable;
 
 const MAX_RUN_SIZE: usize = 13;
 const MIN_RUN_SIZE: usize = 3;
@@ -31,7 +33,7 @@ impl Run {
             return None;
         }
         let start_val = start.as_value();
-        if start_val + ScoreValue::of(len) > ScoreValue::of(13) {
+        if start_val + ScoreValue::of_u16(len - 1) > ScoreValue::of_u16(13) {
             return None;
         }
         let mut end = start;
@@ -114,18 +116,6 @@ impl Run {
 
     pub fn get_run_color(&self) -> Color {
         self.color
-    }
-
-    /// According to the rules, jokers score the value of the tile it represents (for initial meld)
-    /// For Points at the end of the game (i.e. just on the rack, it is 30.)
-    pub fn total_value(&self) -> ScoreValue {
-        let mut current = Some(self.start);
-        let mut sum: ScoreValue = ScoreValue::of(0);
-        while current.is_some() && current.unwrap() <= self.end {
-            sum += current.unwrap().as_value();
-            current = current.unwrap().next();
-        }
-        sum
     }
 
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
@@ -245,11 +235,28 @@ impl Decompose for Run {
         }
         tiles
     }
+
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+        match rule {
+            OnRack => self.decompose().score(OnRack),
+            OnTable => {
+                let mut current = Some(self.start);
+                let mut sum: ScoreValue = ScoreValue::of_u16(0u16);
+                while current.is_some() && current.unwrap() <= self.end {
+                    let number = current.unwrap();
+                    sum += number.as_value();
+                    current = number.next();
+                }
+                Ok(sum)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod run_parsing {
     use super::*;
+    use crate::domain::score_value::JOKER_RACK_SCORE;
     use crate::domain::sets::ParseError::*;
     use crate::domain::tiles::color::Color;
     use crate::domain::tiles::number::Number;
@@ -417,13 +424,18 @@ mod run_parsing {
         let second = RegularTile(color, Six);
         let third = RegularTile(color, Seven);
 
-        let actual_sum = ScoreValue::of(5 + 6 + 7);
+        let expected_sum = ScoreValue::of(5 + 6 + 7);
         let known_run = Run::parse(&vec![first, second, third]).expect("BROKEN");
-        assert_eq!(known_run.total_value(), known_run.total_value());
+        assert_eq!(expected_sum, known_run.score(OnTable));
+        assert_eq!(expected_sum, known_run.score(OnRack));
 
-        let actual_sum_with_joker = ScoreValue::of(5 + 6 + 7 + 8);
+        let actual_sum_with_joker = ScoreValue::of_u16(5 + 6 + 7 + 8);
         let with_joker = Run::parse(&vec![first, second, third, JokersWild]).expect("BROKEN");
-        assert_eq!(actual_sum_with_joker, with_joker.total_value());
+        assert_eq!(actual_sum_with_joker, with_joker.score(OnTable).unwrap());
+        assert_eq!(
+            expected_sum.unwrap() + JOKER_RACK_SCORE,
+            with_joker.score(OnRack).unwrap()
+        );
     }
 }
 
@@ -532,5 +544,23 @@ mod other_tests_of_runs {
 
         assert_eq!(actual.len(), 3);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    pub fn run_scoring() {
+        let run_start = Run::of(One, Blue, 3).unwrap();
+        assert_eq!(run_start.score(OnRack).unwrap(), ScoreValue::of_u16(6));
+        let run_end = Run::of(Eleven, Blue, 3).unwrap();
+        assert_eq!(run_end.score(OnTable).unwrap(), ScoreValue::of_u16(36));
+
+        let run_joker: Run = Run::parse(&vec![
+            JokersWild,
+            RegularTile(Blue, Two),
+            RegularTile(Blue, Three),
+            JokersWild,
+        ])
+            .unwrap();
+        assert_eq!(run_joker.score(OnRack).unwrap(), ScoreValue::of_u16(65));
+        assert_eq!(run_joker.score(OnTable).unwrap(), ScoreValue::of_u16(10));
     }
 }

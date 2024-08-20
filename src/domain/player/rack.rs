@@ -3,10 +3,9 @@ use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 
-use strum::IntoEnumIterator;
-
 use crate::domain::player::initial_meld::InitialMeld;
-use crate::domain::score_value::ScoreValue;
+use crate::domain::score_value::ScoringRule::OnRack;
+use crate::domain::score_value::{ScoreValue, ScoringRule};
 use crate::domain::sets::group::Group;
 use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
@@ -15,6 +14,8 @@ use crate::domain::tiles::number::Number;
 use crate::domain::tiles::tile_sequence::{only_regular_tiles, TileSequence, TileSequenceType};
 use crate::domain::tiles::Tile;
 use crate::domain::{Decompose, RummikubError};
+use strum::IntoEnumIterator;
+use ScoringRule::OnTable;
 
 const INITIAL_TILES: u8 = 14;
 
@@ -45,13 +46,19 @@ impl PartialOrd for Rack {
 
 impl Ord for Rack {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.total_value().cmp(&other.total_value())
+        self.score(OnRack)
+            .unwrap()
+            .cmp(&other.score(OnRack).unwrap())
     }
 }
 
 impl Decompose for Rack {
     fn decompose(&self) -> Vec<Tile> {
         self.rack.clone()
+    }
+
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+        self.rack.score(OnRack)
     }
 }
 
@@ -105,10 +112,6 @@ impl Rack {
             played_initial_meld: false,
         };
         (player_rack, bones)
-    }
-
-    pub fn total_value(&self) -> ScoreValue {
-        ScoreValue::add_em_up(&self.rack)
     }
 
     /// Returns all available sets that currently exist on the rack.
@@ -188,7 +191,8 @@ impl Rack {
 #[cfg(test)]
 mod basic_tests {
     use crate::domain::player::rack::Rack;
-    use crate::domain::score_value::ScoreValue;
+    use crate::domain::score_value::ScoringRule::OnRack;
+    use crate::domain::score_value::{ScoreValue, JOKER_RACK_SCORE};
     use crate::domain::sets::group::Group;
     use crate::domain::sets::run::Run;
     use crate::domain::sets::Set;
@@ -322,8 +326,8 @@ mod basic_tests {
             ],
             played_initial_meld: false,
         };
-        let expected_score: ScoreValue = ScoreValue::of(30 + 5 + 6 + 7);
-        assert_eq!(expected_score, foo.total_value())
+        let expected_score = JOKER_RACK_SCORE + ScoreValue::of_u16(5 + 6 + 7);
+        assert_eq!(expected_score, foo.score(OnRack).unwrap());
     }
 
     #[test]
@@ -361,8 +365,8 @@ mod basic_tests {
             .remove(&one_to_three_blue)
             .expect("Rack was manufactured");
         assert_eq!(
-            ScoreValue::of(1 + 5 + 10 + 11 + 13),
-            test_rack.total_value(),
+            ScoreValue::of_u16(1 + 5 + 10 + 11 + 13),
+            test_rack.score(OnRack).unwrap(),
             "Rack should be remaining tiles 1+5+10+11+13"
         );
         assert_eq!(Count(5), test_rack.count().expect("Rack must be countable"))

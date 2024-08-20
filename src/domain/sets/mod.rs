@@ -3,9 +3,9 @@ use std::fmt::{format, Display, Formatter};
 use group::Group;
 use run::Run;
 
-use crate::domain::score_value::ScoreValue;
+use crate::domain::score_value::{ScoreValue, ScoringRule};
 use crate::domain::tiles::Tile;
-use crate::domain::Decompose;
+use crate::domain::{Decompose, RummikubError};
 
 pub mod group;
 pub mod run;
@@ -15,15 +15,6 @@ pub enum Set {
     // There are two kinds of sets, either a group or a run
     Group(Group),
     Run(Run),
-}
-
-impl Set {
-    pub fn total_value(&self) -> ScoreValue {
-        match self {
-            Set::Group(g) => g.total_value(),
-            Set::Run(r) => r.total_value(),
-        }
-    }
 }
 
 impl Display for Set {
@@ -45,6 +36,13 @@ impl Decompose for Set {
         match self {
             Set::Group(g) => g.decompose(),
             Set::Run(r) => r.decompose(),
+        }
+    }
+
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+        match self {
+            Set::Group(g) => g.score(rule),
+            Set::Run(r) => r.score(rule),
         }
     }
 }

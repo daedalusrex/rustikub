@@ -13,10 +13,13 @@ pub struct FaceUpTiles {
     pub sets: Vec<Set>,
 }
 
+use crate::domain::score_value::ScoringRule::OnTable;
+use crate::domain::score_value::{ScoreValue, ScoringRule};
 use crate::domain::tiles::tile_sequence::TileSequence;
 use crate::domain::{Count, Decompose, RummikubError};
 use colored;
 use colored::{ColoredString, Colorize};
+use ScoringRule::OnRack;
 
 impl Display for FaceUpTiles {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -35,6 +38,21 @@ impl Decompose for FaceUpTiles {
             tiles.append(set.decompose().as_mut())
         }
         tiles
+    }
+
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+        match rule {
+            OnRack => Err(RummikubError),
+            OnTable => {
+                let sum = self
+                    .sets
+                    .iter()
+                    .map(|s| s.score(OnTable).unwrap().as_u16())
+                    .sum::<u16>();
+
+                Ok(ScoreValue::of(sum)?)
+            }
+        }
     }
 }
 
@@ -60,6 +78,14 @@ impl FaceUpTiles {
     /// TODO for now, just do the simplest possible steps of adding to existing sets
     /// TODO plan is to eventually add one function for each possible change. The hardest being split
     pub fn place_new_tile(&self, candidate: &Tile) -> Option<FaceUpTiles> {
+        if let Some(table) = self.simple_add_tile(candidate) {
+            return Some(table);
+        }
+
+        None
+    }
+
+    fn simple_add_tile(&self, candidate: &Tile) -> Option<FaceUpTiles> {
         let mut mut_sets: Vec<Set> = vec![];
         let mut tile_was_added = false;
 
@@ -101,9 +127,6 @@ impl FaceUpTiles {
             None
         }
     }
-
-    // fn simple_add_tile(&self, candidate: &Tile) -> Option<FaceUpTiles> {
-
 
     pub fn place_new_sets(&self, sets: &Vec<Set>) -> FaceUpTiles {
         let mut new_face_up = self.clone();

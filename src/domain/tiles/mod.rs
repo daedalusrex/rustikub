@@ -4,7 +4,8 @@ pub mod color;
 pub mod number;
 pub mod tile_sequence;
 
-use crate::domain::Decompose;
+use crate::domain::score_value::{ScoreValue, ScoringRule, JOKER_RACK_SCORE};
+use crate::domain::{Decompose, RummikubError};
 use color::Color;
 use colored::ColoredString;
 use colored::Colorize;
@@ -25,7 +26,17 @@ pub enum Tile {
 impl Decompose for Tile {
     /// can a tile decompose into itself? -> YES lol
     fn decompose(&self) -> TileSequence {
-        return vec![self.clone()];
+        vec![self.clone()]
+    }
+
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+        match self {
+            RegularTile(_, number) => Ok(number.as_value()),
+            JokersWild => match rule {
+                ScoringRule::OnRack => Ok(JOKER_RACK_SCORE),
+                ScoringRule::OnTable => Err(RummikubError),
+            },
+        }
     }
 }
 

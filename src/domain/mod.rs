@@ -1,3 +1,4 @@
+use crate::domain::score_value::{ScoreValue, ScoringRule};
 use crate::domain::tiles::Tile;
 use tiles::tile_sequence::TileSequence;
 
@@ -30,17 +31,19 @@ pub trait Decompose {
         if length > MAX_TILE_COUNT as usize {
             return Err(RummikubError);
         }
-        let convert: Result<u8, _> = length.try_into();
-        Ok(Count(convert.map_err(|e| RummikubError)?))
+        Ok(Count(length.try_into().map_err(|e| RummikubError)?))
     }
+
+    fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError>;
 }
 
 /// Represents count of an unordered collection of tiles, max is 106 as that is all in the game
-#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-pub struct Count(u8);
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct Count(pub u8);
 
 #[cfg(test)]
 mod domain_test {
+    use crate::domain::score_value::{ScoreValue, ScoringRule};
     use crate::domain::tiles::Tile;
     use crate::domain::{Count, Decompose, RummikubError};
 
@@ -51,6 +54,13 @@ mod domain_test {
     impl Decompose for TestDummy {
         fn decompose(&self) -> Vec<Tile> {
             vec![Tile::any_regular(); 100] // Cool array constructor
+        }
+
+        /// Can have a default implementation, but still override it
+        /// According to the rules, jokers score the value of the tile it represents (e.g. for initial meld)
+        /// For Points at the end of the game (i.e. just on the rack, it is 30.)
+        fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
+            Ok(ScoreValue::of_u16(0))
         }
     }
 
