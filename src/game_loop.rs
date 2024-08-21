@@ -68,6 +68,7 @@ pub fn take_turn(prev_rack: &Rack, prev_table: &PublicGameState) -> (Rack, Publi
             //TODO technically this should not happen, but can if players do not play well or hold on forever
             println!("\n--> All Tiles have been Drawn! Game Over!\n");
             // TODO again, taking a shortcut here
+            // TODO LOOOOOL, yes a mega shortcut just reseting the "winner" to have an empty rack. Need to redo logic
             mut_rack = Rack {
                 rack: vec![],
                 played_initial_meld: true,

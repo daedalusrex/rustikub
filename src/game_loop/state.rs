@@ -28,6 +28,7 @@ pub struct GameState {
 impl GameState {
     /// Initializes game loop based on provided configuration
     pub fn init_game(conf: GameConfig) -> GameState {
+        // TODO handle some kind of random seed to make things reproducible
         let mut board = PublicGameState {
             boneyard: Boneyard::new_game(),
             face_up: FaceUpTiles::new(),

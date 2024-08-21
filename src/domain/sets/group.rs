@@ -277,7 +277,7 @@ pub mod group_tests {
             RegularTile(Blue, Five),
             JokersWild,
         ])
-            .unwrap();
+        .unwrap();
         assert_eq!(
             ScoreValue::of_u16(15u16),
             known_group.score(OnTable).unwrap()
@@ -295,7 +295,7 @@ pub mod group_tests {
             RegularTile(Blue, Five),
             RegularTile(Orange, Five),
         ])
-            .unwrap();
+        .unwrap();
         let result = known_group.add_tile(&RegularTile(Black, Five));
         assert!(result.is_some());
 
@@ -305,7 +305,7 @@ pub mod group_tests {
             RegularTile(Orange, Five),
             RegularTile(Black, Five),
         ])
-            .unwrap();
+        .unwrap();
         assert_eq!(parsed, result.unwrap());
 
         let joker_g = Group::parse(vec![
@@ -313,7 +313,7 @@ pub mod group_tests {
             RegularTile(Blue, Five),
             JokersWild,
         ])
-            .unwrap();
+        .unwrap();
         let joke = joker_g.add_tile(&RegularTile(Orange, Five));
         assert!(joke.is_some());
         let joke_jok = joker_g.add_tile(&JokersWild);

@@ -559,7 +559,7 @@ mod other_tests_of_runs {
             RegularTile(Blue, Three),
             JokersWild,
         ])
-            .unwrap();
+        .unwrap();
         assert_eq!(run_joker.score(OnRack).unwrap(), ScoreValue::of_u16(65));
         assert_eq!(run_joker.score(OnTable).unwrap(), ScoreValue::of_u16(10));
     }
