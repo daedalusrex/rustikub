@@ -13,6 +13,7 @@ use ScoringRule::OnTable;
 
 const MAX_RUN_SIZE: usize = 13;
 const MIN_RUN_SIZE: usize = 3;
+const MIN_NATURAL_RUN_SPLIT_SIZE: usize = 6;
 const MAX_JOKERS_IN_RUN: usize = 2;
 
 /// A set of three or more consecutive numbers all in the same color.
@@ -110,6 +111,69 @@ impl Run {
         })
     }
 
+    /// Returns the leftmost (i.e. smallest) tile that could be added to this run
+    /// so if run is 2,3,4 -> 1.
+    fn leftmost_open_slot(&self) -> Option<Tile> {
+        let left = self.start.prev()?;
+        Some(RegularTile(self.color, left))
+    }
+
+    /// Returns the rightmost (i.e largest) tile that could be added to this run
+    /// so if run is 10,11,12 -> 13
+    fn rightmost_open_slot(&self) -> Option<Tile> {
+        let right = self.end.next()?;
+        Some(RegularTile(self.color, right))
+    }
+
+    /// Returns all possible pairs of runs that can be created by splitting a single run
+    /// in two, without adding any additional tiles.
+    /// Gives a vector, because that will allow strategy to consider max possible potential
+    /// spots to insert a new tile
+    /// Indexes/position are the only thing that matters for this kind of split
+    pub fn all_possible_natural_splits(&self) -> Option<Vec<(Run, Run)>> {
+        let tiles = self.decompose();
+
+        if tiles.len() < MIN_NATURAL_RUN_SPLIT_SIZE {
+            return None;
+        }
+
+        let first_split = 3usize;
+        let max_split = tiles.len() - first_split; // todo verify not potential off by one error
+
+        let mut run_pairs: Vec<(Run, Run)> = vec![];
+        // TODO use vector slices correctly
+
+        // TODO adapt the parse signature to take slice, because a vector dereferences to a slice, INSTEAD of Copying the slice to a new vector every time
+        for mid in first_split..max_split {
+            let (left, right) = tiles.split_at(mid);
+            // let left_run = Run::parse(left);
+        }
+
+        let split_foo = tiles.split_at(0);
+
+        let thing = tiles.iter();
+
+        // for earliest_possibe split index to last possible split index split the decompose
+        // then  parse both entires . if both succeed. (which always should, but idk man), make them not be options
+        // and dump into return
+
+        // DOCS
+        let v = vec![1, 2, 3, 4, 5, 6];
+
+        {
+            let (left, right) = v.split_at(0);
+            assert_eq!(left, []);
+            assert_eq!(right, [1, 2, 3, 4, 5, 6]);
+        }
+
+        {
+            let (left, right) = v.split_at(2);
+            assert_eq!(left, [1, 2]);
+            assert_eq!(right, [3, 4, 5, 6]);
+        }
+        None
+    }
+
     pub fn contains(&self, n: Number) -> bool {
         self.start <= n && self.end >= n
     }
@@ -123,6 +187,7 @@ impl Run {
     /// on either end of the run. If none is provided the highest value location will be chosen
     pub fn add_tile(&self, tile: &Tile, requested_spot: Option<&Number>) -> Option<Self> {
         // TODO Consider breaking this up into different types of functions, simple ones first, joker later
+        // TODO, honestly consider throwing away/re-writing, lots of different ideas crammed in here
 
         // Clojure logic for where to put Joker, only if requested spot is not provided
         let find_highest_target = || -> Option<Number> {
@@ -442,7 +507,6 @@ mod run_parsing {
 #[cfg(test)]
 mod other_tests_of_runs {
     use super::*;
-    use crate::domain::sets::group::Group;
     use crate::domain::sets::ParseError::*;
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number::*;
@@ -507,7 +571,7 @@ mod other_tests_of_runs {
     #[test]
     fn known_infinite_loop_edge_case() {
         use std::thread;
-        use std::time::{Duration, Instant};
+        use std::time::Duration;
         use Color::*;
         let special_case: Vec<Tile> = vec![
             RegularTile(Black, Eleven),
@@ -559,8 +623,58 @@ mod other_tests_of_runs {
             RegularTile(Blue, Three),
             JokersWild,
         ])
-        .unwrap();
+            .unwrap();
         assert_eq!(run_joker.score(OnRack).unwrap(), ScoreValue::of_u16(65));
         assert_eq!(run_joker.score(OnTable).unwrap(), ScoreValue::of_u16(10));
+    }
+
+    #[test]
+    pub fn test_left_right_open_slots() {
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        let eleven_twelve_thirteen: Run = Run::of(Eleven, Black, 3).unwrap();
+
+        assert_eq!(one_two_three.leftmost_open_slot(), None);
+        assert_eq!(
+            one_two_three.rightmost_open_slot(),
+            Some(RegularTile(Blue, Four))
+        );
+
+        assert_eq!(
+            eleven_twelve_thirteen.leftmost_open_slot(),
+            Some(RegularTile(Black, Ten))
+        );
+        assert_eq!(eleven_twelve_thirteen.rightmost_open_slot(), None);
+    }
+
+    #[test]
+    pub fn test_all_possible_natural_splits() {
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        assert_eq!(one_two_three.all_possible_natural_splits(), None);
+
+        let two_thru_seven: Run = Run::of(Two, Blue, 6).unwrap();
+        let expected: Vec<(Run, Run)> = vec![(
+            Run::of(Two, Blue, 3).unwrap(),
+            Run::of(Five, Blue, 3).unwrap(),
+        )];
+        assert_eq!(
+            expected,
+            two_thru_seven.all_possible_natural_splits().unwrap()
+        );
+
+        let three_thru_nine: Run = Run::of(Three, Blue, 7).unwrap();
+        let expected: Vec<(Run, Run)> = vec![
+            (
+                Run::of(Three, Blue, 3).unwrap(),
+                Run::of(Six, Blue, 4).unwrap(),
+            ),
+            (
+                Run::of(Three, Blue, 4).unwrap(),
+                Run::of(Seven, Blue, 3).unwrap(),
+            ),
+        ];
+        assert_eq!(
+            expected,
+            three_thru_nine.all_possible_natural_splits().unwrap()
+        )
     }
 }
