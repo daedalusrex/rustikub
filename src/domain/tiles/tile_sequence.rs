@@ -25,9 +25,9 @@ pub fn only_regular_tiles(tiles: &TileSequence) -> TileSequence {
         .collect()
 }
 
-pub fn unique_colors(tiles: &TileSequence) -> HashSet<Color> {
+pub fn unique_colors(tiles: &[Tile]) -> HashSet<Color> {
     // Wow -> https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter_map
-    return tiles.iter().filter_map(|t| t.get_color()).collect();
+    tiles.iter().filter_map(|t| t.get_color()).collect()
 }
 
 // Just for testing out type aliases
@@ -103,7 +103,7 @@ impl TileSequenceType {
             optional_runs.extend(
                 all_subsequences
                     .iter()
-                    .filter_map(Run::parse)
+                    .filter_map(|arg0: &Vec<Tile>| Run::parse(arg0)) // closure required for Slice
                     .collect::<Vec<Run>>(), // Not sure why needed but okay
             );
         }

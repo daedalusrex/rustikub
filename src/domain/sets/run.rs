@@ -49,12 +49,14 @@ impl Run {
         })
     }
 
-    /// Parses a reference to an immutable vector of tiles, i.e. TileSequence, and check it it is
+    /// Parses a reference to an immutable vector of tiles, i.e. TileSequence, and check it is
     /// a valid run, based on the rules of Rummikub. If it is create the run, and return it
     /// otherwise returns None.
     /// This assumes the order given is the order intended, and does not try any other permutations
     /// or orderings. It also assumes the Jokers are not intended to be moved around.
-    pub fn parse(candidates: &TileSequence) -> Option<Run> {
+    /// Updated to take slice because a vector coerces down to a slice
+    /// https://doc.rust-lang.org/book/ch04-03-slices.html
+    pub fn parse(candidates: &[Tile]) -> Option<Run> {
         if candidates.len() < MIN_RUN_SIZE || candidates.len() > MAX_RUN_SIZE {
             return None;
         }
@@ -136,42 +138,20 @@ impl Run {
         if tiles.len() < MIN_NATURAL_RUN_SPLIT_SIZE {
             return None;
         }
-
-        let first_split = 3usize;
-        let max_split = tiles.len() - first_split; // todo verify not potential off by one error
-
         let mut run_pairs: Vec<(Run, Run)> = vec![];
-        // TODO use vector slices correctly
 
-        // TODO adapt the parse signature to take slice, because a vector dereferences to a slice, INSTEAD of Copying the slice to a new vector every time
+        let first_split = MIN_RUN_SIZE;
+        let max_split = tiles.len() + 1 - first_split; // todo verify not potential off by one error
+
         for mid in first_split..max_split {
+            // SLICED AND DICED -> No copy, more efficient
             let (left, right) = tiles.split_at(mid);
-            // let left_run = Run::parse(left);
+            run_pairs.push((Run::parse(left)?, Run::parse(right)?))
         }
-
-        let split_foo = tiles.split_at(0);
-
-        let thing = tiles.iter();
-
-        // for earliest_possibe split index to last possible split index split the decompose
-        // then  parse both entires . if both succeed. (which always should, but idk man), make them not be options
-        // and dump into return
-
-        // DOCS
-        let v = vec![1, 2, 3, 4, 5, 6];
-
-        {
-            let (left, right) = v.split_at(0);
-            assert_eq!(left, []);
-            assert_eq!(right, [1, 2, 3, 4, 5, 6]);
+        if run_pairs.len() == 0 {
+            return None;
         }
-
-        {
-            let (left, right) = v.split_at(2);
-            assert_eq!(left, [1, 2]);
-            assert_eq!(right, [3, 4, 5, 6]);
-        }
-        None
+        Some(run_pairs)
     }
 
     pub fn contains(&self, n: Number) -> bool {
@@ -657,24 +637,28 @@ mod other_tests_of_runs {
             Run::of(Five, Blue, 3).unwrap(),
         )];
         assert_eq!(
-            expected,
-            two_thru_seven.all_possible_natural_splits().unwrap()
+            two_thru_seven.all_possible_natural_splits().unwrap(),
+            expected
         );
 
-        let three_thru_nine: Run = Run::of(Three, Blue, 7).unwrap();
+        let three_thru_ten: Run = Run::of(Three, Blue, 8).unwrap();
         let expected: Vec<(Run, Run)> = vec![
             (
                 Run::of(Three, Blue, 3).unwrap(),
-                Run::of(Six, Blue, 4).unwrap(),
+                Run::of(Six, Blue, 5).unwrap(),
             ),
             (
                 Run::of(Three, Blue, 4).unwrap(),
-                Run::of(Seven, Blue, 3).unwrap(),
+                Run::of(Seven, Blue, 4).unwrap(),
+            ),
+            (
+                Run::of(Three, Blue, 5).unwrap(),
+                Run::of(Eight, Blue, 3).unwrap(),
             ),
         ];
         assert_eq!(
-            expected,
-            three_thru_nine.all_possible_natural_splits().unwrap()
+            three_thru_ten.all_possible_natural_splits().unwrap(),
+            expected
         )
     }
 }
