@@ -13,7 +13,10 @@ use ScoringRule::OnTable;
 
 const MAX_RUN_SIZE: usize = 13;
 const MIN_RUN_SIZE: usize = 3;
-const MIN_NATURAL_RUN_SPLIT_SIZE: usize = 6;
+/// Minimum Natural Split size means you need enough for two complete runs
+const MIN_NATURAL_RUN_SPLIT_SIZE: usize = MIN_RUN_SIZE * 2;
+/// The minimum size for creating two runs by adding one more is double a run minus the one you add
+const MIN_WEDGE_RUN_SPLIT_SIZE: usize = MIN_RUN_SIZE * 2 - 1;
 const MAX_JOKERS_IN_RUN: usize = 2;
 
 /// A set of three or more consecutive numbers all in the same color.
@@ -156,7 +159,7 @@ impl Run {
         let mut run_pairs: Vec<(Run, Run)> = vec![];
 
         let first_split = MIN_RUN_SIZE;
-        let max_split = tiles.len() + 1 - first_split; // todo verify not potential off by one error
+        let max_split = tiles.len() + 1 - first_split;
 
         for mid in first_split..max_split {
             // SLICED AND DICED -> No copy, more efficient
@@ -169,12 +172,49 @@ impl Run {
         Some(run_pairs)
     }
 
-    pub fn contains(&self, n: Number) -> bool {
-        self.start <= n && self.end >= n
+    /// Returns all possible pairs of runs that can be created by splitting a single run
+    /// in two and adding a tile to either the ends or the middle to maintain two legal runs
+    fn all_possible_wedge_splits(&self) -> Option<Vec<(Run, Run)>> {
+        todo!()
     }
 
-    pub fn get_run_color(&self) -> Color {
-        self.color
+    /// Returns all regular tiles that could be used as "wedges" to insert into a run that
+    /// would allow that run to be split into two distinct runs
+    /// This can only be tiles that are a distance of 2 from either end, beacuse it is
+    /// impossible to split into multiple runs using the edge 2 tiles.
+    /// i.e. [1,2,3,4,5] -> Only 3, because only [1,2,3] and [3,4,5] is valid
+    pub fn all_possible_wedge_tiles(&self) -> Option<HashSet<Tile>> {
+        let tiles = self.decompose();
+        if tiles.len() < MIN_WEDGE_RUN_SPLIT_SIZE {
+            return None;
+        }
+        let first_two = MIN_RUN_SIZE - 1;
+        let last_two = MIN_RUN_SIZE - 1;
+        let inner_quantity = tiles.len() - (first_two + last_two);
+
+        let wedges: HashSet<Tile> = tiles
+            .into_iter()
+            .skip(first_two)
+            .take(inner_quantity)
+            .collect();
+        if wedges.is_empty() {
+            return None;
+        }
+        Some(wedges)
+    }
+
+    /// If the given tile is an acceptable wedge tile, will split the run into two
+    /// and insert that tile into one of the runs. Returns None if tile cannot be wedged in.
+    /// Also returns none if the tile could be placed on the ends of the existing run because
+    /// such placement does NOT require a split
+    /// If is Joker, will pick an arbitrary location to split the run.
+    /// TODO make Joker handling better
+    pub fn insert_wedge_and_split(&self, tile: Tile) -> Option<(Run, Run)> {
+        todo!()
+    }
+
+    pub fn contains(&self, n: Number) -> bool {
+        self.start <= n && self.end >= n
     }
 
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
@@ -698,5 +738,23 @@ mod other_tests_of_runs {
             three_thru_ten.all_possible_natural_splits().unwrap(),
             expected
         )
+    }
+
+    #[test]
+    pub fn test_all_possible_wedge_tiles() {
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        assert!(one_two_three.all_possible_wedge_tiles().is_none());
+
+        let one_thru_five: Run = Run::of(One, Blue, 5).unwrap();
+        let expected = Some(HashSet::from([RegularTile(Blue, Three)]));
+        assert_eq!(one_thru_five.all_possible_wedge_tiles(), expected);
+
+        let one_thru_seven: Run = Run::of(One, Blue, 7).unwrap();
+        let expected = Some(HashSet::from([
+            RegularTile(Blue, Three),
+            RegularTile(Blue, Four),
+            RegularTile(Blue, Five),
+        ]));
+        assert_eq!(one_thru_seven.all_possible_wedge_tiles(), expected);
     }
 }
