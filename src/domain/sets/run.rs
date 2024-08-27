@@ -127,6 +127,21 @@ impl Run {
         Some(RegularTile(self.color, right))
     }
 
+    /// Returns open slots where tiles could be attached on either end
+    pub fn open_slots(self) -> Option<HashSet<Tile>> {
+        let optional_slots = vec![self.leftmost_open_slot(), self.rightmost_open_slot()];
+
+        let slots: HashSet<Tile> = optional_slots
+            .into_iter()
+            .filter(|s| s.is_some())
+            .map(|t| t.unwrap())
+            .collect::<HashSet<Tile>>();
+        if slots.len() == 0 {
+            return None;
+        }
+        Some(slots)
+    }
+
     /// Returns all possible pairs of runs that can be created by splitting a single run
     /// in two, without adding any additional tiles.
     /// Gives a vector, because that will allow strategy to consider max possible potential
@@ -491,6 +506,7 @@ mod other_tests_of_runs {
     use crate::domain::tiles::color::Color::*;
     use crate::domain::tiles::number::Number::*;
     use crate::domain::tiles::Tile::RegularTile;
+    use std::hash::Hash;
 
     fn good_run_red_678() -> (Vec<Tile>, Run) {
         let original = vec![
@@ -624,6 +640,28 @@ mod other_tests_of_runs {
             Some(RegularTile(Black, Ten))
         );
         assert_eq!(eleven_twelve_thirteen.rightmost_open_slot(), None);
+    }
+
+    #[test]
+    pub fn test_open_slots() {
+        let one_thru_thirteen: Run = Run::of(One, Orange, 13).unwrap();
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        let two_three_four: Run = Run::of(Two, Blue, 3).unwrap();
+        let eleven_twelve_thirteen: Run = Run::of(Eleven, Black, 3).unwrap();
+
+        assert_eq!(one_thru_thirteen.open_slots(), None);
+
+        let expected = Some(HashSet::from([RegularTile(Blue, Four)]));
+        assert_eq!(one_two_three.open_slots(), expected);
+
+        let expected = Some(HashSet::from([
+            RegularTile(Blue, One),
+            RegularTile(Blue, Five),
+        ]));
+        assert_eq!(two_three_four.open_slots(), expected);
+
+        let expected = Some(HashSet::from([RegularTile(Black, Ten)]));
+        assert_eq!(eleven_twelve_thirteen.open_slots(), expected);
     }
 
     #[test]
