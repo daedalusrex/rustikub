@@ -210,28 +210,24 @@ impl Run {
     }
 
     /// If the given tile is an acceptable wedge tile, will split the run into two
-    /// and insert that tile into one of the runs. Returns None if tile cannot be wedged in.
-    /// Also returns none if the tile could be placed on the ends of the existing run because
-    /// such placement does NOT require a split
-    /// If is Joker, will pick an arbitrary location to split the run.
-    /// TODO make Joker handling better
-    pub fn insert_wedge_and_split(&self, tile: Tile) -> Option<(Run, Run)> {
-        let valid_wedges: HashSet<Tile> = self.all_possible_wedge_slots()?;
-        if !valid_wedges.contains(&tile) {
+    /// and insert that tile on the indicated index to split the runs.
+    /// Returns None if tile cannot be wedged in, or if no wedge is possible
+    pub fn insert_wedge_and_split(&self, wedge: Tile, position: usize) -> Option<(Run, Run)> {
+        if !self.all_possible_wedge_slots()?.contains(&wedge) {
             return None;
         }
         let tiles = self.decompose();
+        if tiles.len() <= position {
+            return None;
+        }
+        if !wedge.is_joker() && tiles[position] != wedge {
+            return None;
+        }
+        let (left, right) = tiles.split_at(position);
+        // Fancy? Or Unreadable and Arcane? I'M LEAVING IT
+        let left_with_wedge = [left, [wedge].as_slice()].concat();
 
-        // Should handle non-matching colors as well.
-        // TODO Consider making this an argument type
-        let pos = tiles.iter().position(|t| t == &tile)?;
-
-        let (left, right) = tiles.split_at(pos);
-        // SPLIT_AT on that pos,
-        // insert wedge into...the smaller one depending on split at
-        // parse yo runs, and return
-
-        todo!()
+        Some((Run::parse(&left_with_wedge)?, Run::parse(right)?))
     }
 
     pub fn contains(&self, n: Number) -> bool {
@@ -794,5 +790,32 @@ mod other_tests_of_runs {
             RegularTile(Black, Eleven),
         ]));
         assert_eq!(five_thru_ten.all_possible_slots(), expected);
+    }
+
+    #[test]
+    pub fn test_insert_wedge_and_split() {
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        let actual_opt = one_two_three.insert_wedge_and_split(RegularTile(Black, Two), 1);
+        assert!(actual_opt.is_none());
+        let actual_opt = one_two_three.insert_wedge_and_split(RegularTile(Black, Two), 3);
+        assert!(actual_opt.is_none());
+        let actual_opt = one_two_three.insert_wedge_and_split(RegularTile(Orange, Two), 1);
+        assert!(actual_opt.is_none());
+
+        let five_thru_ten: Run = Run::of(Five, Black, 6).unwrap();
+        let actual_opt = five_thru_ten.insert_wedge_and_split(RegularTile(Black, Seven), 2);
+        assert!(actual_opt.is_some());
+        let actual = actual_opt.unwrap();
+
+        let expected = (
+            Run::of(Five, Black, 3).unwrap(),
+            Run::of(Seven, Black, 4).unwrap(),
+        );
+        assert_eq!(actual, expected);
+
+        let actual_opt = five_thru_ten.insert_wedge_and_split(RegularTile(Orange, Seven), 2);
+        assert!(actual_opt.is_none());
+        let actual_opt = five_thru_ten.insert_wedge_and_split(RegularTile(Black, Four), 0);
+        assert!(actual_opt.is_none());
     }
 }
