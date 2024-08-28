@@ -130,14 +130,13 @@ impl Run {
         Some(RegularTile(self.color, right))
     }
 
-    /// Returns open slots where tiles could be attached on either end
-    pub fn open_slots(self) -> Option<HashSet<Tile>> {
+    /// Returns open slots where tiles could be attached on either end without splitting the run
+    pub fn edge_slots(&self) -> Option<HashSet<Tile>> {
         let optional_slots = vec![self.leftmost_open_slot(), self.rightmost_open_slot()];
 
         let slots: HashSet<Tile> = optional_slots
             .into_iter()
-            .filter(|s| s.is_some())
-            .map(|t| t.unwrap())
+            .filter_map(|x| x)
             .collect::<HashSet<Tile>>();
         if slots.len() == 0 {
             return None;
@@ -172,10 +171,18 @@ impl Run {
         Some(run_pairs)
     }
 
-    /// Returns all possible pairs of runs that can be created by splitting a single run
-    /// in two and adding a tile to either the ends or the middle to maintain two legal runs
-    fn all_possible_wedge_splits(&self) -> Option<Vec<(Run, Run)>> {
-        todo!()
+    /// Returns a hash set of all possible tiles that could be individually added to the run
+    /// Derived from the rules, this must be the "wedge" tiles that could be duplicated to create
+    /// new runs, as well as the edge slots that can be added to the existing runs.
+    /// The tiles within a distance of two from the edges cannot be added
+    pub fn all_possible_slots(&self) -> Option<HashSet<Tile>> {
+        let edges = self.edge_slots().unwrap_or(HashSet::new());
+        let middle = self.all_possible_wedge_slots().unwrap_or(HashSet::new());
+        let all: HashSet<Tile> = edges.union(&middle).cloned().collect();
+        if all.is_empty() {
+            return None;
+        }
+        Some(all)
     }
 
     /// Returns all regular tiles that could be used as "wedges" to insert into a run that
@@ -183,20 +190,19 @@ impl Run {
     /// This can only be tiles that are a distance of 2 from either end, beacuse it is
     /// impossible to split into multiple runs using the edge 2 tiles.
     /// i.e. [1,2,3,4,5] -> Only 3, because only [1,2,3] and [3,4,5] is valid
-    pub fn all_possible_wedge_tiles(&self) -> Option<HashSet<Tile>> {
+    pub fn all_possible_wedge_slots(&self) -> Option<HashSet<Tile>> {
         let tiles = self.decompose();
         if tiles.len() < MIN_WEDGE_RUN_SPLIT_SIZE {
             return None;
         }
-        let first_two = MIN_RUN_SIZE - 1;
-        let last_two = MIN_RUN_SIZE - 1;
-        let inner_quantity = tiles.len() - (first_two + last_two);
+        let border = MIN_RUN_SIZE - 1;
+        // alternative implementation is to skip(2), and take(len - 4)
 
-        let wedges: HashSet<Tile> = tiles
-            .into_iter()
-            .skip(first_two)
-            .take(inner_quantity)
+        let wedges: HashSet<Tile> = tiles[border..tiles.len() - border]
+            .iter()
+            .cloned()
             .collect();
+
         if wedges.is_empty() {
             return None;
         }
@@ -210,6 +216,21 @@ impl Run {
     /// If is Joker, will pick an arbitrary location to split the run.
     /// TODO make Joker handling better
     pub fn insert_wedge_and_split(&self, tile: Tile) -> Option<(Run, Run)> {
+        let valid_wedges: HashSet<Tile> = self.all_possible_wedge_slots()?;
+        if !valid_wedges.contains(&tile) {
+            return None;
+        }
+        let tiles = self.decompose();
+
+        // Should handle non-matching colors as well.
+        // TODO Consider making this an argument type
+        let pos = tiles.iter().position(|t| t == &tile)?;
+
+        let (left, right) = tiles.split_at(pos);
+        // SPLIT_AT on that pos,
+        // insert wedge into...the smaller one depending on split at
+        // parse yo runs, and return
+
         todo!()
     }
 
@@ -220,6 +241,7 @@ impl Run {
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
     /// with the tile attached. Requested Spot is only considered for Jokers, which could be placed
     /// on either end of the run. If none is provided the highest value location will be chosen
+    /// TODO enable this deprecated flag #[deprecated]
     pub fn add_tile(&self, tile: &Tile, requested_spot: Option<&Number>) -> Option<Self> {
         // TODO Consider breaking this up into different types of functions, simple ones first, joker later
         // TODO, honestly consider throwing away/re-writing, lots of different ideas crammed in here
@@ -689,19 +711,19 @@ mod other_tests_of_runs {
         let two_three_four: Run = Run::of(Two, Blue, 3).unwrap();
         let eleven_twelve_thirteen: Run = Run::of(Eleven, Black, 3).unwrap();
 
-        assert_eq!(one_thru_thirteen.open_slots(), None);
+        assert_eq!(one_thru_thirteen.edge_slots(), None);
 
         let expected = Some(HashSet::from([RegularTile(Blue, Four)]));
-        assert_eq!(one_two_three.open_slots(), expected);
+        assert_eq!(one_two_three.edge_slots(), expected);
 
         let expected = Some(HashSet::from([
             RegularTile(Blue, One),
             RegularTile(Blue, Five),
         ]));
-        assert_eq!(two_three_four.open_slots(), expected);
+        assert_eq!(two_three_four.edge_slots(), expected);
 
         let expected = Some(HashSet::from([RegularTile(Black, Ten)]));
-        assert_eq!(eleven_twelve_thirteen.open_slots(), expected);
+        assert_eq!(eleven_twelve_thirteen.edge_slots(), expected);
     }
 
     #[test]
@@ -743,11 +765,11 @@ mod other_tests_of_runs {
     #[test]
     pub fn test_all_possible_wedge_tiles() {
         let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
-        assert!(one_two_three.all_possible_wedge_tiles().is_none());
+        assert!(one_two_three.all_possible_wedge_slots().is_none());
 
         let one_thru_five: Run = Run::of(One, Blue, 5).unwrap();
         let expected = Some(HashSet::from([RegularTile(Blue, Three)]));
-        assert_eq!(one_thru_five.all_possible_wedge_tiles(), expected);
+        assert_eq!(one_thru_five.all_possible_wedge_slots(), expected);
 
         let one_thru_seven: Run = Run::of(One, Blue, 7).unwrap();
         let expected = Some(HashSet::from([
@@ -755,6 +777,22 @@ mod other_tests_of_runs {
             RegularTile(Blue, Four),
             RegularTile(Blue, Five),
         ]));
-        assert_eq!(one_thru_seven.all_possible_wedge_tiles(), expected);
+        assert_eq!(one_thru_seven.all_possible_wedge_slots(), expected);
+    }
+
+    #[test]
+    pub fn test_all_possible_tile_slots() {
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        let expected = Some(HashSet::from([RegularTile(Blue, Four)]));
+        assert_eq!(one_two_three.all_possible_slots(), expected);
+
+        let five_thru_ten: Run = Run::of(Five, Black, 6).unwrap();
+        let expected = Some(HashSet::from([
+            RegularTile(Black, Four),
+            RegularTile(Black, Seven),
+            RegularTile(Black, Eight),
+            RegularTile(Black, Eleven),
+        ]));
+        assert_eq!(five_thru_ten.all_possible_slots(), expected);
     }
 }
