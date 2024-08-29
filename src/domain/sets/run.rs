@@ -7,7 +7,7 @@ use crate::domain::tiles::tile_sequence::{unique_colors, TileSequence};
 use crate::domain::tiles::Tile;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use crate::domain::{Decompose, RummikubError};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::vec;
 use ScoringRule::OnTable;
 
@@ -230,8 +230,51 @@ impl Run {
         Some((Run::parse(&left_with_wedge)?, Run::parse(right)?))
     }
 
+    /// Returns the set of "spare" tiles starting from the left with their positions in the
+    /// original run, such that the Run that remains is of the smallest possible size.
+    /// i.e. [1,2,3,4,5] -> (1 & 2), [3,4,5]
+    fn left_side_spares(&self) -> Option<(HashMap<Tile, usize>, Run)> {
+        let foo: HashMap<Tile, usize> = HashMap::new();
+        let bar: HashSet<Tile>;
+        bar = foo.keys().cloned().collect();
+        None
+    }
+
+    /// Returns the set of "spare" tiles starting from the right with their positions in the
+    /// original run, such that the Run that remains is of the smallest possible size.
+    /// i.e. [1,2,3,4,5] -> [1,2,3], (4 & 5)
+    fn right_side_spares(&self) -> Option<(HashMap<Tile, usize>, Run)> {
+        todo!()
+    }
+
+    ///
+    pub fn all_possible_spares(&self) -> Option<HashSet<Tile>> {
+        todo!("Maybe Don't Do this? It would always be everything but the center tile if the Run is odd")
+    }
+
     pub fn contains(&self, n: Number) -> bool {
         self.start <= n && self.end >= n
+    }
+
+    pub fn get_position(&self, num: Number) -> Option<usize> {
+        if !self.contains(num) {
+            return None;
+        }
+        let mut current = Some(self.start);
+        let mut i: usize = 0;
+        todo!()
+    }
+
+    fn decompose_with_indexes(&self) -> HashMap<Tile, usize> {
+        self.decompose()
+            .into_iter()
+            .enumerate()
+            .map(|(i, tile)| (tile, i))
+            .collect::<HashMap<Tile, usize>>()
+    }
+
+    pub fn read_tile_at(&self, position: usize) -> Option<Tile> {
+        todo!()
     }
 
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
@@ -368,6 +411,73 @@ impl Decompose for Run {
                 Ok(sum)
             }
         }
+    }
+}
+
+// struct RunIterator<'a> {
+//     run: &'a Run,
+//     index: Number,
+//     tiles: &'a Vec<Tile>,
+// }
+
+// impl Run {
+//     pub fn iter(&self) -> RunIterator {
+//         RunIterator {
+//             run: self,
+//             index: self.start,
+//             tiles: &self.decompose(),
+//         }
+//     }
+// }
+// impl<'a> Iterator for RunIterator<'a> {
+//     type Item = &'a Tile;
+//
+//     fn next(&mut self) -> Option<Self::Item> {
+//         if self.index == self.run.end {
+//             return None;
+//         }
+//         let next_num = self.index.next()?;
+//         if self.run.jokers.contains(&next_num) {
+//             self.tiles.push(JokersWild);
+//         } else {
+//             self.tiles.push(RegularTile(self.run.color, next_num));
+//         }
+//         Some(&self.tiles[self.tiles.len() - 1])
+//     }
+// }
+
+pub struct RunIntoIterator {
+    run: Run,
+    index: Number,
+}
+
+impl IntoIterator for Run {
+    type Item = Tile;
+    type IntoIter = RunIntoIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RunIntoIterator {
+            index: self.start,
+            run: self,
+        }
+    }
+}
+
+impl Iterator for RunIntoIterator {
+    type Item = Tile;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // TODO refactor this code to be more logical and concise, and also correct
+        let mut tile;
+        if self.run.jokers.contains(&self.index) {
+            tile = JokersWild
+        } else {
+            tile = RegularTile(self.run.color, self.index)
+        }
+        // if self.index != self.run.end {
+            self.index = self.index.next()?;
+        // }
+        Some(tile)
     }
 }
 
@@ -677,7 +787,7 @@ mod other_tests_of_runs {
             RegularTile(Blue, Three),
             JokersWild,
         ])
-            .unwrap();
+        .unwrap();
         assert_eq!(run_joker.score(OnRack).unwrap(), ScoreValue::of_u16(65));
         assert_eq!(run_joker.score(OnTable).unwrap(), ScoreValue::of_u16(10));
     }
@@ -817,5 +927,23 @@ mod other_tests_of_runs {
         assert!(actual_opt.is_none());
         let actual_opt = five_thru_ten.insert_wedge_and_split(RegularTile(Black, Four), 0);
         assert!(actual_opt.is_none());
+    }
+
+    #[test]
+    pub fn test_decompose_with_indexes() {
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        let result = one_two_three.decompose_with_indexes();
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[&RegularTile(Blue, One)], 0);
+        assert_eq!(result[&RegularTile(Blue, Two)], 1);
+        assert_eq!(result[&RegularTile(Blue, Three)], 2);
+    }
+
+    #[test]
+    pub fn test_into_iterator_for_run() {
+        let one_thru_thirteen: Run = Run::of(One, Blue, 13).unwrap();
+        for t in one_thru_thirteen.into_iter() {
+            print!("{}", t);
+        }
     }
 }
