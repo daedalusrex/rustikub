@@ -414,41 +414,41 @@ impl Decompose for Run {
     }
 }
 
-// struct RunIterator<'a> {
-//     run: &'a Run,
-//     index: Number,
-//     tiles: &'a Vec<Tile>,
-// }
+struct RunIterator<'a> {
+    run: &'a Run,
+    index: Number,
+    tiles: &'a Vec<Tile>,
+}
 
-// impl Run {
-//     pub fn iter(&self) -> RunIterator {
-//         RunIterator {
-//             run: self,
-//             index: self.start,
-//             tiles: &self.decompose(),
-//         }
-//     }
-// }
-// impl<'a> Iterator for RunIterator<'a> {
-//     type Item = &'a Tile;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.index == self.run.end {
-//             return None;
-//         }
-//         let next_num = self.index.next()?;
-//         if self.run.jokers.contains(&next_num) {
-//             self.tiles.push(JokersWild);
-//         } else {
-//             self.tiles.push(RegularTile(self.run.color, next_num));
-//         }
-//         Some(&self.tiles[self.tiles.len() - 1])
-//     }
-// }
+impl Run {
+    pub fn iter(&self) -> RunIterator {
+        RunIterator {
+            run: self,
+            index: self.start,
+            tiles: &self.decompose(),
+        }
+    }
+}
+impl<'a> Iterator for RunIterator<'a> {
+    type Item = &'a Tile;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.run.end {
+            return None;
+        }
+        let next_num = self.index.next()?;
+        if self.run.jokers.contains(&next_num) {
+            self.tiles.push(JokersWild);
+        } else {
+            self.tiles.push(RegularTile(self.run.color, next_num));
+        }
+        Some(&self.tiles[self.tiles.len() - 1])
+    }
+}
 
 pub struct RunIntoIterator {
     run: Run,
-    index: Number,
+    index: Option<Number>,
 }
 
 impl IntoIterator for Run {
@@ -457,7 +457,7 @@ impl IntoIterator for Run {
 
     fn into_iter(self) -> Self::IntoIter {
         RunIntoIterator {
-            index: self.start,
+            index: Some(self.start),
             run: self,
         }
     }
@@ -467,17 +467,15 @@ impl Iterator for RunIntoIterator {
     type Item = Tile;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // TODO refactor this code to be more logical and concise, and also correct
-        let mut tile;
-        if self.run.jokers.contains(&self.index) {
-            tile = JokersWild
-        } else {
-            tile = RegularTile(self.run.color, self.index)
+        if let Some(index_num) = self.index {
+            self.index = index_num.next();
+            return if self.run.jokers.contains(&index_num) {
+                Some(JokersWild)
+            } else {
+                Some(RegularTile(self.run.color, index_num))
+            };
         }
-        // if self.index != self.run.end {
-            self.index = self.index.next()?;
-        // }
-        Some(tile)
+        None
     }
 }
 
@@ -942,8 +940,22 @@ mod other_tests_of_runs {
     #[test]
     pub fn test_into_iterator_for_run() {
         let one_thru_thirteen: Run = Run::of(One, Blue, 13).unwrap();
-        for t in one_thru_thirteen.into_iter() {
+        for t in one_thru_thirteen.clone().into_iter() {
             print!("{}", t);
         }
+        let mut run_iter = one_thru_thirteen.into_iter();
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, One)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Two)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Three)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Four)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Five)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Six)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Seven)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Eight)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Nine)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Ten)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Eleven)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Twelve)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Blue, Thirteen)));
     }
 }
