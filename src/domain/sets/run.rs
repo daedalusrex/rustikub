@@ -234,10 +234,7 @@ impl Run {
     /// original run, such that the Run that remains is of the smallest possible size.
     /// i.e. [1,2,3,4,5] -> (1 & 2), [3,4,5]
     fn left_side_spares(&self) -> Option<(HashMap<Tile, usize>, Run)> {
-        let foo: HashMap<Tile, usize> = HashMap::new();
-        let bar: HashSet<Tile>;
-        bar = foo.keys().cloned().collect();
-        None
+        todo!()
     }
 
     /// Returns the set of "spare" tiles starting from the right with their positions in the
@@ -257,11 +254,11 @@ impl Run {
     }
 
     pub fn get_position(&self, num: Number) -> Option<usize> {
-        if !self.contains(num) {
-            return None;
-        }
-        let mut current = Some(self.start);
-        let mut i: usize = 0;
+        // if !self.contains(num) {
+        //     return None;
+        // }
+        // let mut current = Some(self.start);
+        // let mut i: usize = 0;
         todo!()
     }
 
@@ -416,33 +413,35 @@ impl Decompose for Run {
 
 struct RunIterator<'a> {
     run: &'a Run,
-    index: Number,
-    tiles: &'a Vec<Tile>,
+    index: Option<Number>,
 }
 
-impl Run {
-    pub fn iter(&self) -> RunIterator {
+impl<'a> Run {
+    fn iter(&'a self) -> RunIterator {
         RunIterator {
             run: self,
-            index: self.start,
-            tiles: &self.decompose(),
+            index: Some(self.start),
         }
     }
 }
-impl<'a> Iterator for RunIterator<'a> {
-    type Item = &'a Tile;
+
+// TODO with this successfuly implemented, remove most calls of `decompose` in run
+impl Iterator for RunIterator<'_> {
+    /// They key here was to change from the suggested Item type of: type Item = &'a Tile;
+    /// which actually means a reference that has some explicit lifetime, and just give out
+    /// an owned Tile type! After all the run does not in fact own it in its representation!
+    type Item = Tile;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.run.end {
-            return None;
+        if let Some(index_num) = self.index {
+            self.index = index_num.next();
+            return if self.run.jokers.contains(&index_num) {
+                Some(JokersWild)
+            } else {
+                Some(RegularTile(self.run.color, index_num))
+            };
         }
-        let next_num = self.index.next()?;
-        if self.run.jokers.contains(&next_num) {
-            self.tiles.push(JokersWild);
-        } else {
-            self.tiles.push(RegularTile(self.run.color, next_num));
-        }
-        Some(&self.tiles[self.tiles.len() - 1])
+        None
     }
 }
 
@@ -957,5 +956,44 @@ mod other_tests_of_runs {
         assert_eq!(run_iter.next(), Some(RegularTile(Blue, Eleven)));
         assert_eq!(run_iter.next(), Some(RegularTile(Blue, Twelve)));
         assert_eq!(run_iter.next(), Some(RegularTile(Blue, Thirteen)));
+    }
+
+    #[test]
+    pub fn test_iter_for_run_with_lifetimes() {
+        let mut one_thru_thirteen: Run = Run::of(One, Red, 13).unwrap();
+        let mut run_iter = one_thru_thirteen.iter();
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, One)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Two)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Three)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Four)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Five)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Six)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Seven)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Eight)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Nine)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Ten)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Eleven)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Twelve)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Thirteen)));
+
+        one_thru_thirteen.jokers.insert(Five);
+        one_thru_thirteen.jokers.insert(Thirteen);
+        for t in one_thru_thirteen.iter() {
+            print!("{}", t);
+        }
+        let mut run_iter = one_thru_thirteen.iter();
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, One)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Two)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Three)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Four)));
+        assert_eq!(run_iter.next(), Some(JokersWild));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Six)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Seven)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Eight)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Nine)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Ten)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Eleven)));
+        assert_eq!(run_iter.next(), Some(RegularTile(Red, Twelve)));
+        assert_eq!(run_iter.next(), Some(JokersWild));
     }
 }
