@@ -253,16 +253,15 @@ impl Run {
         self.start <= n && self.end >= n
     }
 
-    pub fn get_position(&self, num: Number) -> Option<usize> {
-        // if !self.contains(num) {
-        //     return None;
-        // }
-        // let mut current = Some(self.start);
-        // let mut i: usize = 0;
-        todo!()
+    /// Trivial, with the new iterator implementation
+    /// Oh but not with jokers actually -> Why would I search for a jokers position with a number?
+    fn get_position(&self, num: Number) -> Option<usize> {
+        self.iter().position(|t| t.is_number(num))
     }
 
     fn decompose_with_indexes(&self) -> HashMap<Tile, usize> {
+        // TODO Why do I need this if I have get position? Iterator is cool though maybe leave it for that
+        // TODO wouldn't two jokers break this?
         self.decompose()
             .into_iter()
             .enumerate()
@@ -382,6 +381,7 @@ impl Decompose for Run {
         let mut current = Some(self.start);
         let mut tiles: Vec<Tile> = vec![];
 
+        // TODO Consider replacing this with the iterator implementation
         while current.is_some() && current.unwrap() <= self.end {
             let num = current.unwrap();
             if self.jokers.contains(&num) {
@@ -398,6 +398,7 @@ impl Decompose for Run {
         match rule {
             OnRack => self.decompose().score(OnRack),
             OnTable => {
+                // TODO Replace with Iterator
                 let mut current = Some(self.start);
                 let mut sum: ScoreValue = ScoreValue::of_u16(0u16);
                 while current.is_some() && current.unwrap() <= self.end {
@@ -411,13 +412,13 @@ impl Decompose for Run {
     }
 }
 
-struct RunIterator<'a> {
+pub struct RunIterator<'a> {
     run: &'a Run,
     index: Option<Number>,
 }
 
 impl<'a> Run {
-    fn iter(&'a self) -> RunIterator {
+    pub fn iter(&'a self) -> RunIterator {
         RunIterator {
             run: self,
             index: Some(self.start),
@@ -995,5 +996,11 @@ mod other_tests_of_runs {
         assert_eq!(run_iter.next(), Some(RegularTile(Red, Eleven)));
         assert_eq!(run_iter.next(), Some(RegularTile(Red, Twelve)));
         assert_eq!(run_iter.next(), Some(JokersWild));
+    }
+
+    #[test]
+    pub fn test_get_position() {
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        assert_eq!(one_two_three.get_position(Two), Some(1));
     }
 }
