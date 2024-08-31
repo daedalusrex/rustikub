@@ -9,6 +9,7 @@ use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use crate::domain::{Decompose, RummikubError};
 use std::collections::{HashMap, HashSet};
 use std::vec;
+use Edge::*;
 use ScoringRule::OnTable;
 
 const MAX_RUN_SIZE: usize = 13;
@@ -32,6 +33,7 @@ pub struct Run {
 
 /// Represents the sides of the run (for adding). Runs are defined as a series of increasing Numbers with
 /// the lowest on the left and the highest on the right.
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub enum Edge {
     Left,
     Right,
@@ -122,6 +124,14 @@ impl Run {
             jokers,
         })
     }
+    pub fn contains(&self, n: Number) -> bool {
+        self.start <= n && self.end >= n
+    }
+
+    /// Trivial, with the new iterator implementation
+    pub fn read_tile_at(&self, position: usize) -> Option<Tile> {
+        self.iter().nth(position)
+    }
 
     /// Returns the leftmost (i.e. smallest) tile that could be added to this run
     /// so if run is 2,3,4 -> 1.
@@ -138,45 +148,18 @@ impl Run {
     }
 
     /// Returns open slots where tiles could be attached on either end without splitting the run
-    /// TODO Consider redefining the result here as a Option<HashMap<Edge, Tile>>
-    pub fn edge_slots(&self) -> Option<HashSet<Tile>> {
-        let optional_slots = vec![self.leftmost_open_slot(), self.rightmost_open_slot()];
-
-        let slots: HashSet<Tile> = optional_slots
-            .into_iter()
-            .filter_map(|x| x)
-            .collect::<HashSet<Tile>>();
+    pub fn edge_slots(&self) -> Option<HashMap<Edge, Tile>> {
+        let mut slots: HashMap<Edge, Tile> = HashMap::new();
+        if let Some(left) = self.leftmost_open_slot() {
+            slots.insert(Left, left);
+        }
+        if let Some(right) = self.rightmost_open_slot() {
+            slots.insert(Right, right);
+        }
         if slots.len() == 0 {
             return None;
         }
         Some(slots)
-    }
-
-    /// Returns all possible pairs of runs that can be created by splitting a single run
-    /// in two, without adding any additional tiles.
-    /// Gives a vector, because that will allow strategy to consider max possible potential
-    /// spots to insert a new tile
-    /// Indexes/position are the only thing that matters for this kind of split
-    pub fn all_possible_natural_splits(&self) -> Option<Vec<(Run, Run)>> {
-        let tiles = self.decompose();
-
-        if tiles.len() < MIN_NATURAL_RUN_SPLIT_SIZE {
-            return None;
-        }
-        let mut run_pairs: Vec<(Run, Run)> = vec![];
-
-        let first_split = MIN_RUN_SIZE;
-        let max_split = tiles.len() + 1 - first_split;
-
-        for mid in first_split..max_split {
-            // SLICED AND DICED -> No copy, more efficient
-            let (left, right) = tiles.split_at(mid);
-            run_pairs.push((Run::parse(left)?, Run::parse(right)?))
-        }
-        if run_pairs.len() == 0 {
-            return None;
-        }
-        Some(run_pairs)
     }
 
     /// Returns a hash set of all possible tiles that could be individually added to the run
@@ -184,7 +167,13 @@ impl Run {
     /// new runs, as well as the edge slots that can be added to the existing runs.
     /// The tiles within a distance of two from the edges cannot be added
     pub fn all_possible_slots(&self) -> Option<HashSet<Tile>> {
-        let edges = self.edge_slots().unwrap_or(HashSet::new());
+        let edges: HashSet<Tile> = self
+            .edge_slots() // Option can be iterated on
+            .into_iter()
+            .map(|h: HashMap<Edge, Tile>| h.into_iter().map(|(e, t)| t))
+            .flatten()
+            .collect();
+
         let middle = self.all_possible_wedge_slots().unwrap_or(HashSet::new());
         let all: HashSet<Tile> = edges.union(&middle).cloned().collect();
         if all.is_empty() {
@@ -238,6 +227,37 @@ impl Run {
         Some((Run::parse(&left_with_wedge)?, Run::parse(right)?))
     }
 
+    pub fn insert_tile_on_edge(&self, tile: Tile, edge: Edge) {
+        todo!()
+    }
+
+    /// Returns all possible pairs of runs that can be created by splitting a single run
+    /// in two, without adding any additional tiles.
+    /// Gives a vector, because that will allow strategy to consider max possible potential
+    /// spots to insert a new tile
+    /// Indexes/position are the only thing that matters for this kind of split
+    pub fn all_possible_natural_splits(&self) -> Option<Vec<(Run, Run)>> {
+        let tiles = self.decompose();
+
+        if tiles.len() < MIN_NATURAL_RUN_SPLIT_SIZE {
+            return None;
+        }
+        let mut run_pairs: Vec<(Run, Run)> = vec![];
+
+        let first_split = MIN_RUN_SIZE;
+        let max_split = tiles.len() + 1 - first_split;
+
+        for mid in first_split..max_split {
+            // SLICED AND DICED -> No copy, more efficient
+            let (left, right) = tiles.split_at(mid);
+            run_pairs.push((Run::parse(left)?, Run::parse(right)?))
+        }
+        if run_pairs.len() == 0 {
+            return None;
+        }
+        Some(run_pairs)
+    }
+
     /// Returns the set of "spare" tiles starting from the left with their positions in the
     /// original run, such that the Run that remains is of the smallest possible size.
     /// i.e. [1,2,3,4,5] -> (1 & 2), [3,4,5]
@@ -252,20 +272,6 @@ impl Run {
         todo!()
     }
 
-    ///
-    pub fn all_possible_spares(&self) -> Option<HashSet<Tile>> {
-        todo!("Maybe Don't Do this? It would always be everything but the center tile if the Run is odd")
-    }
-
-    pub fn contains(&self, n: Number) -> bool {
-        self.start <= n && self.end >= n
-    }
-
-    /// Trivial, with the new iterator implementation
-    pub fn read_tile_at(&self, position: usize) -> Option<Tile> {
-        self.iter().nth(position)
-    }
-
     /// Tile may or may not be Jokers, but this represents the ordered position of Numbers that
     /// are contained within the run, even if one of those numbers has a joker
     pub fn decompose_as_numbers(&self) -> HashMap<Number, usize> {
@@ -273,10 +279,6 @@ impl Run {
             .enumerate()
             .map(|(i, num)| (num, i))
             .collect::<HashMap<Number, usize>>()
-    }
-
-    pub fn add_tile_to_edge(&self, tile: Tile, edge: Edge) {
-        todo!()
     }
 
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
@@ -853,16 +855,16 @@ mod other_tests_of_runs {
 
         assert_eq!(one_thru_thirteen.edge_slots(), None);
 
-        let expected = Some(HashSet::from([RegularTile(Blue, Four)]));
+        let expected = Some(HashMap::from([(Right, RegularTile(Blue, Four))]));
         assert_eq!(one_two_three.edge_slots(), expected);
 
-        let expected = Some(HashSet::from([
-            RegularTile(Blue, One),
-            RegularTile(Blue, Five),
+        let expected = Some(HashMap::from([
+            (Left, RegularTile(Blue, One)),
+            (Right, RegularTile(Blue, Five)),
         ]));
         assert_eq!(two_three_four.edge_slots(), expected);
 
-        let expected = Some(HashSet::from([RegularTile(Black, Ten)]));
+        let expected = Some(HashMap::from([(Left, RegularTile(Black, Ten))]));
         assert_eq!(eleven_twelve_thirteen.edge_slots(), expected);
     }
 
