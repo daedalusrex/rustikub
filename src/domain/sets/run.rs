@@ -227,8 +227,18 @@ impl Run {
         Some((Run::parse(&left_with_wedge)?, Run::parse(right)?))
     }
 
-    pub fn insert_tile_on_edge(&self, tile: Tile, edge: Edge) {
-        todo!()
+    /// Accepts a candidate tile, and an indication of which side of the run to try to add it
+    /// to. If allowed, it will give back a modified version of the run
+    pub fn insert_tile_on_edge(&self, tile: Tile, edge: Edge) -> Option<Run> {
+        if self.edge_slots()?.get(&edge)? == &tile || tile.is_joker() {
+            let mut tiles = self.decompose();
+            match edge {
+                Left => tiles.insert(0, tile),
+                Right => tiles.push(tile),
+            }
+            return Some(Run::parse(&tiles)?);
+        }
+        None
     }
 
     /// Returns all possible pairs of runs that can be created by splitting a single run
@@ -284,7 +294,7 @@ impl Run {
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
     /// with the tile attached. Requested Spot is only considered for Jokers, which could be placed
     /// on either end of the run. If none is provided the highest value location will be chosen
-    /// TODO enable this deprecated flag #[deprecated]
+    #[deprecated]
     pub fn add_tile(&self, tile: &Tile, requested_spot: Option<&Number>) -> Option<Self> {
         // TODO Consider breaking this up into different types of functions, simple ones first, joker later
         // TODO, honestly consider throwing away/re-writing, lots of different ideas crammed in here
@@ -1074,5 +1084,28 @@ mod other_tests_of_runs {
     pub fn test_get_position() {
         let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
         assert_eq!(one_two_three.read_tile_at(1), Some(RegularTile(Blue, Two)));
+    }
+
+    #[test]
+    pub fn test_insert_tile_on_edge() {
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        assert!(one_two_three
+            .insert_tile_on_edge(JokersWild, Left)
+            .is_none());
+        assert!(one_two_three
+            .insert_tile_on_edge(RegularTile(Blue, Four), Left)
+            .is_none());
+
+        let mut expected = Run::of(One, Blue, 4).unwrap();
+        assert_eq!(
+            one_two_three.insert_tile_on_edge(RegularTile(Blue, Four), Right),
+            Some(expected.clone())
+        );
+
+        expected.jokers.insert(Four);
+        assert_eq!(
+            one_two_three.insert_tile_on_edge(JokersWild, Right),
+            Some(expected)
+        );
     }
 }
