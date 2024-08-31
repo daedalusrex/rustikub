@@ -254,23 +254,17 @@ impl Run {
     }
 
     /// Trivial, with the new iterator implementation
-    /// Oh but not with jokers actually -> Why would I search for a jokers position with a number?
-    fn get_position(&self, num: Number) -> Option<usize> {
-        self.iter().position(|t| t.is_number(num))
-    }
-
-    fn decompose_with_indexes(&self) -> HashMap<Tile, usize> {
-        // TODO Why do I need this if I have get position? Iterator is cool though maybe leave it for that
-        // TODO wouldn't two jokers break this?
-        self.decompose()
-            .into_iter()
-            .enumerate()
-            .map(|(i, tile)| (tile, i))
-            .collect::<HashMap<Tile, usize>>()
-    }
-
     pub fn read_tile_at(&self, position: usize) -> Option<Tile> {
-        todo!()
+        self.iter().nth(position)
+    }
+
+    /// Tile may or may not be Jokers, but this represents the ordered position of Numbers that
+    /// are contained within the run, even if one of those numbers has a joker
+    pub fn decompose_as_numbers(&self) -> HashMap<Number, usize> {
+        self.number_iter()
+            .enumerate()
+            .map(|(i, num)| (num, i))
+            .collect::<HashMap<Number, usize>>()
     }
 
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
@@ -417,9 +411,21 @@ pub struct RunIterator<'a> {
     index: Option<Number>,
 }
 
+pub struct RunNumberIterator<'a> {
+    run: &'a Run,
+    index: Option<Number>,
+}
+
 impl<'a> Run {
     pub fn iter(&'a self) -> RunIterator {
         RunIterator {
+            run: self,
+            index: Some(self.start),
+        }
+    }
+
+    pub fn number_iter(&'a self) -> RunNumberIterator {
+        RunNumberIterator {
             run: self,
             index: Some(self.start),
         }
@@ -436,11 +442,28 @@ impl Iterator for RunIterator<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(index_num) = self.index {
             self.index = index_num.next();
+            if index_num > self.run.end {
+                return None;
+            }
             return if self.run.jokers.contains(&index_num) {
                 Some(JokersWild)
             } else {
                 Some(RegularTile(self.run.color, index_num))
             };
+        }
+        None
+    }
+}
+
+impl Iterator for RunNumberIterator<'_> {
+    type Item = Number;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index_num = self.index?;
+
+        if index_num <= self.run.end {
+            self.index = index_num.next();
+            return Some(index_num);
         }
         None
     }
@@ -468,6 +491,9 @@ impl Iterator for RunIntoIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(index_num) = self.index {
+            if index_num > self.run.end {
+                return None;
+            }
             self.index = index_num.next();
             return if self.run.jokers.contains(&index_num) {
                 Some(JokersWild)
@@ -930,11 +956,11 @@ mod other_tests_of_runs {
     #[test]
     pub fn test_decompose_with_indexes() {
         let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
-        let result = one_two_three.decompose_with_indexes();
+        let result = one_two_three.decompose_as_numbers();
         assert_eq!(result.len(), 3);
-        assert_eq!(result[&RegularTile(Blue, One)], 0);
-        assert_eq!(result[&RegularTile(Blue, Two)], 1);
-        assert_eq!(result[&RegularTile(Blue, Three)], 2);
+        assert_eq!(result[&One], 0);
+        assert_eq!(result[&Two], 1);
+        assert_eq!(result[&Three], 2);
     }
 
     #[test]
@@ -957,6 +983,10 @@ mod other_tests_of_runs {
         assert_eq!(run_iter.next(), Some(RegularTile(Blue, Eleven)));
         assert_eq!(run_iter.next(), Some(RegularTile(Blue, Twelve)));
         assert_eq!(run_iter.next(), Some(RegularTile(Blue, Thirteen)));
+        assert_eq!(run_iter.next(), None);
+
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        assert_eq!(one_two_three.into_iter().count(), 3);
     }
 
     #[test]
@@ -976,6 +1006,7 @@ mod other_tests_of_runs {
         assert_eq!(run_iter.next(), Some(RegularTile(Red, Eleven)));
         assert_eq!(run_iter.next(), Some(RegularTile(Red, Twelve)));
         assert_eq!(run_iter.next(), Some(RegularTile(Red, Thirteen)));
+        assert_eq!(run_iter.next(), None);
 
         one_thru_thirteen.jokers.insert(Five);
         one_thru_thirteen.jokers.insert(Thirteen);
@@ -996,11 +1027,40 @@ mod other_tests_of_runs {
         assert_eq!(run_iter.next(), Some(RegularTile(Red, Eleven)));
         assert_eq!(run_iter.next(), Some(RegularTile(Red, Twelve)));
         assert_eq!(run_iter.next(), Some(JokersWild));
+        assert_eq!(run_iter.next(), None);
+
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        assert_eq!(one_two_three.iter().count(), 3);
+    }
+
+    #[test]
+    pub fn test_number_iterator_for_run() {
+        let mut one_thru_thirteen: Run = Run::of(One, Orange, 13).unwrap();
+        one_thru_thirteen.jokers.insert(One);
+        one_thru_thirteen.jokers.insert(Thirteen);
+        let mut run_iter = one_thru_thirteen.number_iter();
+        assert_eq!(run_iter.next(), Some(One));
+        assert_eq!(run_iter.next(), Some(Two));
+        assert_eq!(run_iter.next(), Some(Three));
+        assert_eq!(run_iter.next(), Some(Four));
+        assert_eq!(run_iter.next(), Some(Five));
+        assert_eq!(run_iter.next(), Some(Six));
+        assert_eq!(run_iter.next(), Some(Seven));
+        assert_eq!(run_iter.next(), Some(Eight));
+        assert_eq!(run_iter.next(), Some(Nine));
+        assert_eq!(run_iter.next(), Some(Ten));
+        assert_eq!(run_iter.next(), Some(Eleven));
+        assert_eq!(run_iter.next(), Some(Twelve));
+        assert_eq!(run_iter.next(), Some(Thirteen));
+        assert_eq!(run_iter.next(), None);
+
+        let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        assert_eq!(one_two_three.number_iter().count(), 3);
     }
 
     #[test]
     pub fn test_get_position() {
         let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
-        assert_eq!(one_two_three.get_position(Two), Some(1));
+        assert_eq!(one_two_three.read_tile_at(1), Some(RegularTile(Blue, Two)));
     }
 }
