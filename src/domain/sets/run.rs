@@ -30,6 +30,13 @@ pub struct Run {
     jokers: HashSet<Number>,
 }
 
+/// Represents the sides of the run (for adding). Runs are defined as a series of increasing Numbers with
+/// the lowest on the left and the highest on the right.
+pub enum Edge {
+    Left,
+    Right,
+}
+
 impl Run {
     /// Creates a run based on defining parameters as given in constructor
     pub fn of(start: Number, color: Color, len: u16) -> Option<Run> {
@@ -131,6 +138,7 @@ impl Run {
     }
 
     /// Returns open slots where tiles could be attached on either end without splitting the run
+    /// TODO Consider redefining the result here as a Option<HashMap<Edge, Tile>>
     pub fn edge_slots(&self) -> Option<HashSet<Tile>> {
         let optional_slots = vec![self.leftmost_open_slot(), self.rightmost_open_slot()];
 
@@ -267,6 +275,10 @@ impl Run {
             .collect::<HashMap<Number, usize>>()
     }
 
+    pub fn add_tile_to_edge(&self, tile: Tile, edge: Edge) {
+        todo!()
+    }
+
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
     /// with the tile attached. Requested Spot is only considered for Jokers, which could be placed
     /// on either end of the run. If none is provided the highest value location will be chosen
@@ -372,36 +384,32 @@ impl Run {
 
 impl Decompose for Run {
     fn decompose(&self) -> Vec<Tile> {
-        let mut current = Some(self.start);
-        let mut tiles: Vec<Tile> = vec![];
-
-        // TODO Consider replacing this with the iterator implementation
-        while current.is_some() && current.unwrap() <= self.end {
-            let num = current.unwrap();
-            if self.jokers.contains(&num) {
-                tiles.push(JokersWild);
-            } else {
-                tiles.push(RegularTile(self.color, num));
-            }
-            current = current.unwrap().next();
-        }
-        tiles
+        // Whoa ->  the power of vector implementations
+        self.iter().collect()
+        // Here's the older, not run-iterable version
+        // let mut current = Some(self.start);
+        // let mut tiles: Vec<Tile> = vec![];
+        //
+        // while current.is_some() && current.unwrap() <= self.end {
+        //     let num = current.unwrap();
+        //     if self.jokers.contains(&num) {
+        //         tiles.push(JokersWild);
+        //     } else {
+        //         tiles.push(RegularTile(self.color, num));
+        //     }
+        //     current = current.unwrap().next();
+        // }
+        // tiles
     }
 
     fn score(&self, rule: ScoringRule) -> Result<ScoreValue, RummikubError> {
         match rule {
             OnRack => self.decompose().score(OnRack),
-            OnTable => {
-                // TODO Replace with Iterator
-                let mut current = Some(self.start);
-                let mut sum: ScoreValue = ScoreValue::of_u16(0u16);
-                while current.is_some() && current.unwrap() <= self.end {
-                    let number = current.unwrap();
-                    sum += number.as_value();
-                    current = number.next();
-                }
-                Ok(sum)
-            }
+            OnTable => Ok(ScoreValue::of(
+                self.number_iter()
+                    .map(|n| n.as_value().as_u16())
+                    .sum::<u16>(),
+            )?),
         }
     }
 }
@@ -424,6 +432,8 @@ impl<'a> Run {
         }
     }
 
+    /// Creates a Number iterator that returns the number represented by the tiles in the run
+    /// Even if a tile happens to be a Joker, this will still return the corresponding number
     pub fn number_iter(&'a self) -> RunNumberIterator {
         RunNumberIterator {
             run: self,
