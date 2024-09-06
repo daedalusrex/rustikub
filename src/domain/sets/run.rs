@@ -268,18 +268,71 @@ impl Run {
         Some(run_pairs)
     }
 
-    /// Returns the set of "spare" tiles starting from the left with their positions in the
-    /// original run, such that the Run that remains is of the smallest possible size.
+    /// Returns the set of "spare" tiles, up to the given limit, starting from the left with their
+    /// positions in the original run, such that the Run that remains is of the smallest possible
+    /// size. Jokers are considered to never be spares, because they must be "retrieved."
     /// i.e. [1,2,3,4,5] -> (1 & 2), [3,4,5]
-    fn left_side_spares(&self) -> Option<(HashMap<Tile, usize>, Run)> {
-        todo!()
+    fn left_side_spares(&self, limit: usize) -> Option<(HashMap<Tile, usize>, Run)> {
+        let max_spares = self.iter().count().checked_sub(MIN_RUN_SIZE)?;
+
+        let spares: HashMap<Tile, usize> = self
+            .iter()
+            .take(max_spares)
+            .take(limit)
+            .take_while(|t| !t.is_joker())
+            .enumerate()
+            .map(|(i, t)| (t, i))
+            .collect();
+
+        if !spares.is_empty() {
+            let remaining = Run::parse(&self.iter().skip(spares.len()).collect::<Vec<Tile>>())?;
+            return Some((spares, remaining));
+        }
+        None
     }
 
-    /// Returns the set of "spare" tiles starting from the right with their positions in the
-    /// original run, such that the Run that remains is of the smallest possible size.
+    /// Returns the set of "spare" tiles, up to the given limit, starting from the right with their
+    /// positions in the original run, such that the Run that remains is of the smallest possible size.
+    /// Jokers are considered to never be spares, because they must be "retrieved."
     /// i.e. [1,2,3,4,5] -> [1,2,3], (4 & 5)
-    fn right_side_spares(&self) -> Option<(HashMap<Tile, usize>, Run)> {
-        todo!()
+    fn right_side_spares(&self, limit: usize) -> Option<(HashMap<Tile, usize>, Run)> {
+        let max_spares = self.iter().count().checked_sub(MIN_RUN_SIZE)?;
+
+        // This implementation took several extra steps to enable proper reversing
+        // Order matters, and so does custom trait implementations vs defaults
+        let spares: HashMap<Tile, usize> = self
+            .iter()
+            .enumerate()
+            .rev()
+            .take(max_spares)
+            .take(limit)
+            .take_while(|(_, t)| !t.is_joker())
+            .map(|(i, t)| (t, i))
+            .collect();
+
+        if !spares.is_empty() {
+            let remaining = Run::parse(
+                &self
+                    .iter()
+                    .rev()
+                    .skip(spares.len())
+                    .rev() // Reverse Reverse!
+                    .collect::<Vec<Tile>>(),
+            )?;
+            return Some((spares, remaining));
+        }
+        None
+    }
+
+    /// Returns the set of "spare" tiles, up to the given limit, starting from the right with their
+    /// positions in the original run, such that the Run that remains is of the smallest possible size.
+    /// Jokers are considered to never be spares, because they must be "retrieved."
+    /// e.g. Right [1,2,3,4,5] -> [1,2,3], (4 & 5)
+    pub fn spares_on_edge(&self, edge: Edge, limit: usize) -> Option<(HashMap<Tile, usize>, Run)> {
+        match edge {
+            Left => self.left_side_spares(limit),
+            Right => self.right_side_spares(limit),
+        }
     }
 
     /// Tile may or may not be Jokers, but this represents the ordered position of Numbers that
@@ -426,9 +479,11 @@ impl Decompose for Run {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct RunIterator<'a> {
     run: &'a Run,
     index: Option<Number>,
+    back_index: Option<Number>,
 }
 
 pub struct RunNumberIterator<'a> {
@@ -441,6 +496,7 @@ impl<'a> Run {
         RunIterator {
             run: self,
             index: Some(self.start),
+            back_index: Some(self.end),
         }
     }
 
@@ -454,7 +510,6 @@ impl<'a> Run {
     }
 }
 
-// TODO with this successfuly implemented, remove most calls of `decompose` in run
 impl Iterator for RunIterator<'_> {
     /// They key here was to change from the suggested Item type of: type Item = &'a Tile;
     /// which actually means a reference that has some explicit lifetime, and just give out
@@ -475,7 +530,31 @@ impl Iterator for RunIterator<'_> {
         }
         None
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.clone().count();
+        (size, Some(size))
+    }
 }
+
+impl DoubleEndedIterator for RunIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if let Some(index_num) = self.back_index {
+            self.back_index = index_num.prev();
+            if index_num < self.run.start {
+                return None;
+            }
+            return if self.run.jokers.contains(&index_num) {
+                Some(JokersWild)
+            } else {
+                Some(RegularTile(self.run.color, index_num))
+            };
+        }
+        None
+    }
+}
+
+impl ExactSizeIterator for RunIterator<'_> {}
 
 impl Iterator for RunNumberIterator<'_> {
     type Item = Number;
@@ -1106,6 +1185,78 @@ mod other_tests_of_runs {
         assert_eq!(
             one_two_three.insert_tile_on_edge(JokersWild, Right),
             Some(expected)
+        );
+    }
+
+    #[test]
+    pub fn test_left_side_spares() {
+        let one_thru_five: Run = Run::of(One, Blue, 5).unwrap();
+
+        let expected: HashMap<Tile, usize> =
+            HashMap::from([(RegularTile(Blue, One), 0), (RegularTile(Blue, Two), 1)]);
+        let run_remaining = Run::of(Three, Blue, 3).unwrap();
+
+        assert_eq!(
+            one_thru_five.spares_on_edge(Left, 2),
+            Some((expected.clone(), run_remaining.clone()))
+        );
+        assert_eq!(
+            one_thru_five.spares_on_edge(Left, 30),
+            Some((expected, run_remaining))
+        );
+        assert!(one_thru_five.spares_on_edge(Left, 0).is_none());
+        assert!(Run::of(One, Blue, 3)
+            .unwrap()
+            .spares_on_edge(Left, 2)
+            .is_none());
+        let mut with_joke = one_thru_five.clone();
+        with_joke.jokers.insert(One);
+        assert!(with_joke.spares_on_edge(Left, 2).is_none());
+        with_joke.jokers.remove(&One);
+        with_joke.jokers.insert(Two);
+        assert!(with_joke.spares_on_edge(Left, 2).is_some());
+        let expected: HashMap<Tile, usize> = HashMap::from([(RegularTile(Blue, One), 0)]);
+        let mut remaining = Run::of(Two, Blue, 4).unwrap();
+        remaining.jokers.insert(Two);
+        assert_eq!(
+            with_joke.spares_on_edge(Left, 2),
+            Some((expected, remaining))
+        );
+    }
+
+    #[test]
+    pub fn test_right_side_spares() {
+        let one_thru_five: Run = Run::of(One, Blue, 5).unwrap();
+
+        let expected: HashMap<Tile, usize> =
+            HashMap::from([(RegularTile(Blue, Four), 3), (RegularTile(Blue, Five), 4)]);
+        let run_remaining = Run::of(One, Blue, 3).unwrap();
+
+        assert_eq!(
+            one_thru_five.spares_on_edge(Right, 2),
+            Some((expected.clone(), run_remaining.clone()))
+        );
+        assert_eq!(
+            one_thru_five.spares_on_edge(Right, 30),
+            Some((expected, run_remaining))
+        );
+        assert!(one_thru_five.spares_on_edge(Right, 0).is_none());
+        assert!(Run::of(One, Blue, 3)
+            .unwrap()
+            .spares_on_edge(Right, 2)
+            .is_none());
+        let mut with_joke = one_thru_five.clone();
+        with_joke.jokers.insert(Five);
+        assert!(with_joke.spares_on_edge(Right, 2).is_none());
+        with_joke.jokers.remove(&Five);
+        with_joke.jokers.insert(Four);
+        assert!(with_joke.spares_on_edge(Right, 2).is_some());
+        let expected: HashMap<Tile, usize> = HashMap::from([(RegularTile(Blue, Five), 4)]);
+        let mut remaining = Run::of(One, Blue, 4).unwrap();
+        remaining.jokers.insert(Four);
+        assert_eq!(
+            with_joke.spares_on_edge(Right, 2),
+            Some((expected, remaining))
         );
     }
 }
