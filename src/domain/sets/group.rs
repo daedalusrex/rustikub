@@ -88,7 +88,7 @@ impl Group {
         })
     }
 
-    pub fn contains(&self, c: &Color) -> bool {
+    pub fn contains(&self, c: Color) -> bool {
         // TODO Jokers?
         self.colors.contains(&c)
     }
@@ -114,7 +114,7 @@ impl Group {
                 })
             }
             RegularTile(color, num, ..) => {
-                if self.contains(color) || &self.num != num {
+                if self.contains(*color) || &self.num != num {
                     return None;
                 }
                 let mut colors = self.colors.clone();
@@ -126,6 +126,28 @@ impl Group {
                 })
             }
         }
+    }
+
+    pub fn has_spare(&self) -> bool {
+        self.count().unwrap().0 as usize > MIN_GROUP_SIZE
+    }
+
+    pub fn extract_spare(&self, color: Color) -> Option<(Group, Tile)> {
+        // If all regular tiles, then it will have all colors, but if one is joker
+        // then it would not be allowed to return the joker, as they must be "retrieved"
+        if !self.has_spare() || !self.contains(color) {
+            return None;
+        }
+        let mut new_group = self.clone();
+        new_group.colors.remove(&color);
+        Some((new_group, RegularTile(color, self.num)))
+    }
+
+    /// The only way to "retrieve" the joker is to replace the color it represents
+    /// with a regular tile that forms a valid Group. Either Color in a Group of 3 is acceptable
+    /// If successful returns the new run and a Joker Tile
+    pub fn retrieve_joker(&self, tile: Tile) -> Option<(Group, Tile)> {
+        todo!()
     }
 }
 
@@ -186,7 +208,7 @@ pub mod group_tests {
             //Colors in candidates match colors in Group
             for tile in &success {
                 if let RegularTile(color, _) = tile {
-                    assert!(good_group.contains(color));
+                    assert!(good_group.contains(*color));
                 } else {
                     panic!("Test Broken! Should be No Jokers Here!")
                 }
@@ -318,5 +340,37 @@ pub mod group_tests {
         assert!(joke.is_some());
         let joke_jok = joker_g.add_tile(&JokersWild);
         assert!(joke_jok.is_some());
+    }
+
+    #[test]
+    fn test_spares() {
+        let gang_of_four = Group::of(Four, &vec![Red, Orange, Black, Blue]).unwrap();
+
+        assert!(gang_of_four.has_spare());
+        let expected = Some((
+            Group::of(Four, &vec![Red, Black, Orange]).unwrap(),
+            RegularTile(Blue, Four),
+        ));
+        assert_eq!(gang_of_four.extract_spare(Blue), expected);
+
+        let gang_of_four_joker = Group::parse(vec![
+            RegularTile(Red, Four),
+            RegularTile(Orange, Four),
+            JokersWild,
+            RegularTile(Blue, Four),
+        ])
+        .unwrap();
+        assert!(gang_of_four_joker.has_spare());
+        assert!(gang_of_four_joker.extract_spare(Black).is_none());
+        let expected = Some((
+            Group::parse(vec![
+                RegularTile(Red, Four),
+                RegularTile(Orange, Four),
+                JokersWild,
+            ])
+            .unwrap(),
+            RegularTile(Blue, Four),
+        ));
+        assert_eq!(gang_of_four_joker.extract_spare(Blue), expected);
     }
 }
