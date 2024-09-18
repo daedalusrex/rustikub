@@ -33,6 +33,7 @@ pub struct Run {
 
 /// Represents the sides of the run (for adding). Runs are defined as a series of increasing Numbers with
 /// the lowest on the left and the highest on the right.
+/// TODO Consider Renaming this to Slot ( Left | Right | Middle(usize) )
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub enum Edge {
     Left,
@@ -148,13 +149,13 @@ impl Run {
     }
 
     /// Returns open slots where tiles could be attached on either end without splitting the run
-    pub fn edge_slots(&self) -> Option<HashMap<Edge, Tile>> {
-        let mut slots: HashMap<Edge, Tile> = HashMap::new();
+    pub fn edge_slots(&self) -> Option<HashMap<Tile, Edge>> {
+        let mut slots: HashMap<Tile, Edge> = HashMap::new();
         if let Some(left) = self.leftmost_open_slot() {
-            slots.insert(Left, left);
+            slots.insert(left, Left);
         }
         if let Some(right) = self.rightmost_open_slot() {
-            slots.insert(Right, right);
+            slots.insert(right, Right);
         }
         if slots.len() == 0 {
             return None;
@@ -167,10 +168,11 @@ impl Run {
     /// new runs, as well as the edge slots that can be added to the existing runs.
     /// The tiles within a distance of two from the edges cannot be added
     pub fn all_possible_slots(&self) -> Option<HashSet<Tile>> {
+        // TODO Consider also returning a hashmap of tile to position,(but edges are incompatible..)
         let edges: HashSet<Tile> = self
             .edge_slots() // Option can be iterated on
             .into_iter()
-            .map(|h: HashMap<Edge, Tile>| h.into_iter().map(|(e, t)| t))
+            .map(|h: HashMap<Tile, Edge>| h.into_iter().map(|(t, e)| t))
             .flatten()
             .collect();
 
@@ -230,7 +232,7 @@ impl Run {
     /// Accepts a candidate tile, and an indication of which side of the run to try to add it
     /// to. If allowed, it will give back a modified version of the run
     pub fn insert_tile_on_edge(&self, tile: Tile, edge: Edge) -> Option<Run> {
-        if self.edge_slots()?.get(&edge)? == &tile || tile.is_joker() {
+        if tile.is_joker() || self.edge_slots()?.get(&tile)? == &edge {
             let mut tiles = self.decompose();
             match edge {
                 Left => tiles.insert(0, tile),
@@ -344,14 +346,19 @@ impl Run {
             .collect::<HashMap<Number, usize>>()
     }
 
+    /// The only way to "retrieve" the joker is to replace the number
+    /// with a regular tile that forms a valid run
+    /// If successful returns the new run and a Joker Tile
+    pub fn retrieve_joker(&self, tile: Tile) -> Option<(Run, Tile)> {
+        todo!()
+    }
+
     /// takes a candidate tile. If it is possible and allowed to be added returns a NEW run
     /// with the tile attached. Requested Spot is only considered for Jokers, which could be placed
     /// on either end of the run. If none is provided the highest value location will be chosen
+    /// TODO Once all usages are removed, delete this function
     #[deprecated]
     pub fn add_tile(&self, tile: &Tile, requested_spot: Option<&Number>) -> Option<Self> {
-        // TODO Consider breaking this up into different types of functions, simple ones first, joker later
-        // TODO, honestly consider throwing away/re-writing, lots of different ideas crammed in here
-
         // Clojure logic for where to put Joker, only if requested spot is not provided
         let find_highest_target = || -> Option<Number> {
             return if self.end == Number::Thirteen {
@@ -641,7 +648,6 @@ mod run_parsing {
             let success = result.expect("BROKEN");
             assert_eq!(success.start, num);
             assert_eq!(success.color, color);
-            // TODO more precise success metrics
         } else {
             assert!(false)
         }
@@ -836,7 +842,6 @@ mod other_tests_of_runs {
         let origin_tile = origin.last().expect("BROKEN");
         if let RegularTile(color, num) = origin_tile {
             if num == &Thirteen {
-                // TODO UGH randomness while testing -> try different test later
                 return;
             }
 
@@ -944,16 +949,16 @@ mod other_tests_of_runs {
 
         assert_eq!(one_thru_thirteen.edge_slots(), None);
 
-        let expected = Some(HashMap::from([(Right, RegularTile(Blue, Four))]));
+        let expected = Some(HashMap::from([(RegularTile(Blue, Four), Right)]));
         assert_eq!(one_two_three.edge_slots(), expected);
 
         let expected = Some(HashMap::from([
-            (Left, RegularTile(Blue, One)),
-            (Right, RegularTile(Blue, Five)),
+            (RegularTile(Blue, One), Left),
+            (RegularTile(Blue, Five), Right),
         ]));
         assert_eq!(two_three_four.edge_slots(), expected);
 
-        let expected = Some(HashMap::from([(Left, RegularTile(Black, Ten))]));
+        let expected = Some(HashMap::from([(RegularTile(Black, Ten), Left)]));
         assert_eq!(eleven_twelve_thirteen.edge_slots(), expected);
     }
 

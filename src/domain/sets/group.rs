@@ -97,7 +97,8 @@ impl Group {
         self.num
     }
 
-    pub fn add_tile(&self, tile: &Tile) -> Option<Group> {
+    /// Inserts tile to the Group if allowed
+    pub fn insert_tile(&self, tile: &Tile) -> Option<Group> {
         if self.colors.len() + self.jokers as usize == MAX_GROUP_SIZE {
             return None;
         }
@@ -318,7 +319,7 @@ pub mod group_tests {
             RegularTile(Orange, Five),
         ])
         .unwrap();
-        let result = known_group.add_tile(&RegularTile(Black, Five));
+        let result = known_group.insert_tile(&RegularTile(Black, Five));
         assert!(result.is_some());
 
         let parsed = Group::parse(vec![
@@ -336,9 +337,9 @@ pub mod group_tests {
             JokersWild,
         ])
         .unwrap();
-        let joke = joker_g.add_tile(&RegularTile(Orange, Five));
+        let joke = joker_g.insert_tile(&RegularTile(Orange, Five));
         assert!(joke.is_some());
-        let joke_jok = joker_g.add_tile(&JokersWild);
+        let joke_jok = joker_g.insert_tile(&JokersWild);
         assert!(joke_jok.is_some());
     }
 

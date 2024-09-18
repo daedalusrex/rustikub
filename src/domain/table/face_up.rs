@@ -15,6 +15,8 @@ pub struct FaceUpTiles {
 
 use crate::domain::score_value::ScoringRule::OnTable;
 use crate::domain::score_value::{ScoreValue, ScoringRule};
+use crate::domain::sets::group::Group;
+use crate::domain::sets::run::Run;
 use crate::domain::tiles::tile_sequence::TileSequence;
 use crate::domain::{Count, Decompose, RummikubError};
 use colored;
@@ -24,8 +26,7 @@ use ScoringRule::OnRack;
 impl Display for FaceUpTiles {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for s in &self.sets {
-            let foo = format!("EXPLODED While wirting: {:?}", s);
-            write!(f, "{}\n", s).expect(&foo)
+            write!(f, "{}\n", s)?
         }
         Ok(())
     }
@@ -57,35 +58,46 @@ impl Decompose for FaceUpTiles {
 }
 
 impl FaceUpTiles {
-    /// Rules have several types of manipulations
-    /// Add one or more tiles from rack to make new set
-    /// Remove a fourth tile from a group and use it to form a new set:
-    /// Add a fourth tile to a set and remove one tile from it, to make another set:
-    /// Splitting a run
-    /// Combined split
-    /// Multiple split:
-    /// Also, special joker rules need to be considered
-    pub fn manipulate() {
-        todo!()
-    }
-
     pub fn new() -> FaceUpTiles {
         FaceUpTiles { sets: vec![] }
     }
 
-    /// Given a candidate tile check if any of the above listed manipulations
-    /// can result in a layout that has the tile as part of all the face up sets
-    /// TODO for now, just do the simplest possible steps of adding to existing sets
-    /// TODO plan is to eventually add one function for each possible change. The hardest being split
-    pub fn place_new_tile(&self, candidate: &Tile) -> Option<FaceUpTiles> {
-        if let Some(table) = self.simple_add_tile(candidate) {
-            return Some(table);
-        }
+    pub fn valid_rearrangement(
+        &self,
+        mut with_added_tiles: TileSequence,
+        other_face_ups: &FaceUpTiles,
+    ) -> bool {
+        with_added_tiles.append(&mut self.decompose());
+        with_added_tiles.sort();
 
-        None
+        let mut other_tiles = other_face_ups.decompose();
+        other_tiles.sort();
+        with_added_tiles == other_tiles
     }
 
-    fn simple_add_tile(&self, candidate: &Tile) -> Option<FaceUpTiles> {
+    pub fn runs(&self) -> Vec<&Run> {
+        self.sets
+            .iter()
+            .filter_map(|x| match x {
+                Set::Group(_) => None,
+                Set::Run(r) => Some(r),
+            })
+            .collect()
+    }
+
+    pub fn groups(&self) -> Vec<Group> {
+        self.sets
+            .iter()
+            .filter_map(|x| match x {
+                Set::Group(g) => Some(g),
+                Set::Run(_) => None,
+            })
+            .cloned()
+            .collect()
+    }
+
+    #[deprecated]
+    pub fn simple_add_tile(&self, candidate: &Tile) -> Option<FaceUpTiles> {
         let mut mut_sets: Vec<Set> = vec![];
         let mut tile_was_added = false;
 
@@ -97,7 +109,7 @@ impl FaceUpTiles {
             } else {
                 let set_with_added: Option<Set> = match existing_set {
                     Set::Group(g) => {
-                        if let Some(updated_group) = g.add_tile(candidate) {
+                        if let Some(updated_group) = g.insert_tile(candidate) {
                             tile_was_added = true;
                             Some(Set::Group(updated_group))
                         } else {
@@ -175,5 +187,37 @@ mod basic_face_up_tests {
 
         assert_eq!(actual.len(), 6);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_valid_rearrangement() {
+        let run = Run::of(One, Blue, 3).unwrap();
+        let group = Group::of(Four, &vec![Blue, Black, Orange, Red]).unwrap();
+
+        let original = FaceUpTiles {
+            sets: vec![Set::Run(run.clone()), Set::Group(group.clone())],
+        };
+
+        let expected_run = Run::of(One, Blue, 4).expect("BROKEN");
+        let expected_group = Group::of(Four, &vec![Black, Orange, Red]).unwrap();
+        let expected_face_up = FaceUpTiles {
+            sets: vec![
+                Set::Run(expected_run.clone()),
+                Set::Group(expected_group.clone()),
+            ],
+        };
+        assert!(original.valid_rearrangement(vec![], &expected_face_up));
+    }
+
+    #[test]
+    fn test_runs_groups_filter() {
+        let run = Run::of(One, Blue, 3).unwrap();
+        let group = Group::of(Four, &vec![Blue, Black, Orange, Red]).unwrap();
+
+        let original = FaceUpTiles {
+            sets: vec![Set::Run(run.clone()), Set::Group(group.clone())],
+        };
+        assert_eq!(vec![&run], original.runs());
+        assert_eq!(vec![group], original.groups());
     }
 }

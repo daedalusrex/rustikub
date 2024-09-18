@@ -1,21 +1,103 @@
 use crate::domain::player::rack::Rack;
+use crate::domain::sets::group::Group;
+use crate::domain::sets::run::Run;
 use crate::domain::sets::Set;
 use crate::domain::table::face_up::FaceUpTiles;
 use crate::domain::tiles::tile_sequence::{TileSequence, TileSequenceType};
 use crate::domain::tiles::Tile;
 use crate::domain::{Count, Decompose};
+use std::os::unix::raw::time_t;
 
 /// If possible, places one (or more) tiles from the rack into the face up tiles on the table
 /// Returns the new Rack and New Tiles if successful, otherwise returns None,
 /// indicating no change could be made
-
+/// TODO this is the one actually called, and would be a great place to "instantiate" or provide
+/// a strategy
 pub fn rearrange(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
+    let chosen_fn: fn(&Rack, &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> = human_like_algorithm;
+
+    chosen_fn(rack, table)
+}
+
+fn human_like_algorithm(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
+    let mut remaining = TileSequenceType::of(&rack.decompose());
+    let mut added: TileSequence = vec![];
+    let mut groups: Vec<Group> = vec![];
+    let mut runs: Vec<Run> = vec![];
+
+    // todo as iter? -> probably ugly
+    // This too many layers, many logic bugs need redo kinda  lot, break it up and so on
+    // Honestly need to redo Face Up to make modifications and other access actually easier
+    //  -- Modification of a single run etc. Like, with a fucking reference
+    // Hold on there cowboy. making opaque modifications to a referenced run in the table
+    // is an easy way to create invalid states that needs to be checked. Indexing and then resending
+    // update request is also unpleasant though
+    'outer_runs: for run in table.runs() {
+        let count = added.len();
+        'inner_rack_tiles: for tile in remaining.decompose() {
+            if let Some(edges) = run.edge_slots() {
+                if edges.contains_key(&tile) {
+                    let new_run = run
+                        .insert_tile_on_edge(tile, edges[&tile])
+                        .expect("Insert Edge Failure");
+                    runs.push(new_run);
+                    remaining = remaining.remove(&tile).expect("Removal Failure");
+                    added.push(tile);
+                    /* Original had a bug If you have duplicate tiles (e.g. 2 Red,One in rack)
+                    and a run 2->7Red, you will add the first tile to the original run (outer for loop)
+                    add it to the new face up
+                    Then add the second tile to the same one in the outer for loop.
+                    */
+                    // The run was modified, and therefore we'd need to compare to it again
+                    break 'inner_rack_tiles;
+                }
+            }
+        }
+        if added.len() == count {
+            runs.push(run.clone());
+        }
+    }
+
+    'outer_groups: for group in table.groups() {
+        let count = added.len();
+        'inner_rack_tiles: for tile in remaining.decompose() {
+            if let Some(new_group) = group.insert_tile(&tile) {
+                groups.push(new_group);
+                remaining = remaining.remove(&tile).expect("Removal Failure");
+                added.push(tile);
+                break 'inner_rack_tiles; // Same reasoning as runs above
+            }
+        }
+        if added.len() == count {
+            groups.push(group);
+        }
+    }
+
+    let mut new_arrangement: Vec<Set> = vec![];
+    new_arrangement.extend(runs.into_iter().map(|r| Set::Run(r)));
+    new_arrangement.extend(groups.into_iter().map(|g| Set::Group(g)));
+    let new_table = FaceUpTiles {
+        sets: new_arrangement,
+    };
+
+    assert!(table.valid_rearrangement(added, &new_table));
+
+    if remaining.count().ok()? < rack.count().ok()? {
+        return Some((
+            Rack::new(&remaining.0, Some(rack.played_initial_meld)).ok()?,
+            new_table,
+        ));
+    }
+    None
+}
+
+fn place_new_tiles_simple(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)> {
     // Place New Tiles simple
     let mut mut_face_up = table.clone();
     let mut remaining = TileSequenceType::of(&rack.decompose());
 
     for attempt in remaining.decompose() {
-        if let Some(place_success) = mut_face_up.place_new_tile(&attempt) {
+        if let Some(place_success) = mut_face_up.simple_add_tile(&attempt) {
             mut_face_up = place_success;
             remaining = remaining.remove(&attempt)?;
         }
@@ -27,56 +109,13 @@ pub fn rearrange(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceUpTiles)
         ));
     }
     None
-
-    // Shatter Algo is not very good at all
-    // let (remaining, new_table) = shatter_and_recombobulate(rack, table)?;
-    // let new_rack = Rack {
-    //     rack: remaining.0,
-    //     played_initial_meld: rack.played_initial_meld,
-    // };
-    // Some((new_rack, new_table))
-
-    // TODO blah blah blah deal with all these comments later
-    // TODO add some kind of grand decomposition, and then recompose the table set by set
-    // should be quite similar to what rack does, but on a grander scale. (ignoring the joker)
-    // Todo recombobulation, and then constraint application
-    // let mut sets: Vec<Set> = vec![];
-    // let mut tiles: TileSequenceType = TileSequenceType(rack.decompose());
-    //
-    // let mut optional_run = tiles.largest_run();
-    // TODO next step, how to remove runs once they are confirmed to exist.
-    // TODO also, this algorithm won't work unless we get back tracking somehow
-    // while let Some(ref largest_run) = optional_run {
-    //     new_rack = new_rack
-    //         .remove(largest_run)
-    //         .expect("Must be able to remove the found run");
-    //     sets.push(Set::Run(largest_run.clone()));
-    //     optional_run = new_rack.get_largest_run();
-    // }
-    //
-    // let runless_rack = new_rack.clone();
-    // for g in runless_rack.groups_on_rack() {
-    //     sets.push(Set::Group(g.clone()));
-    //     new_rack = new_rack
-    //         .remove(&g)
-    //         .expect("Unable to remove set from rack, which claims it exists!");
-    // }
-    // return if sets.len() == 0 {
-    //     None
-    // } else {
-    //     Some((sets, new_rack))
-    // };
-
-    // TODO Consider as part of algorithm using : src/domain/table/face_up.rs:50 place_new_tile
-    // Which attempts to place a single tile, for every tile
-    // None
 }
 
 /// Simples possible version of the algorithm. If I have something decomposable (presumably the
 /// face up tiles), shatter it into it's individual components, and then attempt to
 /// put it back together again, but including the new tile.
 /// Simple implementation creates all runs from largest to smallest, and then groups
-pub fn shatter_and_recombobulate(
+fn shatter_and_recombobulate(
     candidates: &impl Decompose,
     initial_table: &impl Decompose,
 ) -> Option<(TileSequenceType, FaceUpTiles)> {
