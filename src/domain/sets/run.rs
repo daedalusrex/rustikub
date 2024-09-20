@@ -9,18 +9,11 @@ use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use crate::domain::{Decompose, RummikubError};
 use std::collections::{HashMap, HashSet};
 use std::vec;
-use Edge::*;
 use ScoringRule::OnTable;
+use Slot::*;
 
-const MAX_RUN_SIZE: usize = 13;
-const MIN_RUN_SIZE: usize = 3;
-/// Minimum Natural Split size means you need enough for two complete runs
-const MIN_NATURAL_RUN_SPLIT_SIZE: usize = MIN_RUN_SIZE * 2;
-/// The minimum size for creating two runs by adding one more is double a run minus the one you add
-const MIN_WEDGE_RUN_SPLIT_SIZE: usize = MIN_RUN_SIZE * 2 - 1;
-const MAX_JOKERS_IN_RUN: usize = 2;
-
-/// A set of three or more consecutive numbers all in the same color.
+/// A run is defined as set of three or more increasing consecutive Numbers all in the same color.
+/// The lowest number is on the Left, and the highest on the right.
 /// The number 1 is always played as the lowest number, it cannot follow the number 13.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Run {
@@ -31,14 +24,27 @@ pub struct Run {
     jokers: HashSet<Number>,
 }
 
-/// Represents the sides of the run (for adding). Runs are defined as a series of increasing Numbers with
-/// the lowest on the left and the highest on the right.
-/// TODO Consider Renaming this to Slot ( Left | Right | Middle(usize) )
+/// Represents the possible locations in or near the run for adding tiles.
+/// As per the definition of Run, the lowest Number is on the left and the highest on the right.
+/// The Middle, represents any potential location that could have a tile inserted and the run
+/// could be split as two valid Runs. (Referred to as Wedge Slots)
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
-pub enum Edge {
+pub enum Slot {
     Left,
+    Wedge(usize),
     Right,
 }
+
+/// The maximum possible count of tiles a run can have
+const MAX_RUN_SIZE: usize = 13;
+/// The minimum possible count of tiles a run can have
+const MIN_RUN_SIZE: usize = 3;
+/// Minimum Natural Split size means you have enough for two complete runs without adding any tiles
+const MIN_NATURAL_RUN_SPLIT_SIZE: usize = MIN_RUN_SIZE * 2;
+/// The minimum size for creating two runs by adding one tile, is always double the min minus one
+const MIN_WEDGE_RUN_SPLIT_SIZE: usize = MIN_RUN_SIZE * 2 - 1;
+/// As per the rules, This is the maximum quantity of jokers that can exist in a single run
+const MAX_JOKERS_IN_RUN: usize = 2;
 
 impl Run {
     /// Creates a run based on defining parameters as given in constructor
@@ -63,7 +69,7 @@ impl Run {
     }
 
     /// Parses a reference to an immutable vector of tiles, i.e. TileSequence, and check it is
-    /// a valid run, based on the rules of Rummikub. If it is create the run, and return it
+    /// a valid run, based on the rules of Rummikub. If it is, create the run, and return it
     /// otherwise returns None.
     /// This assumes the order given is the order intended, and does not try any other permutations
     /// or orderings. It also assumes the Jokers are not intended to be moved around.
@@ -149,8 +155,9 @@ impl Run {
     }
 
     /// Returns open slots where tiles could be attached on either end without splitting the run
-    pub fn edge_slots(&self) -> Option<HashMap<Tile, Edge>> {
-        let mut slots: HashMap<Tile, Edge> = HashMap::new();
+    pub fn edge_slots(&self) -> Option<HashMap<Tile, Slot>> {
+        // TODO make private
+        let mut slots: HashMap<Tile, Slot> = HashMap::new();
         if let Some(left) = self.leftmost_open_slot() {
             slots.insert(left, Left);
         }
@@ -167,17 +174,14 @@ impl Run {
     /// Derived from the rules, this must be the "wedge" tiles that could be duplicated to create
     /// new runs, as well as the edge slots that can be added to the existing runs.
     /// The tiles within a distance of two from the edges cannot be added
-    pub fn all_possible_slots(&self) -> Option<HashSet<Tile>> {
-        // TODO Consider also returning a hashmap of tile to position,(but edges are incompatible..)
-        let edges: HashSet<Tile> = self
-            .edge_slots() // Option can be iterated on
-            .into_iter()
-            .map(|h: HashMap<Tile, Edge>| h.into_iter().map(|(t, e)| t))
-            .flatten()
-            .collect();
-
-        let middle = self.all_possible_wedge_slots().unwrap_or(HashSet::new());
-        let all: HashSet<Tile> = edges.union(&middle).cloned().collect();
+    pub fn all_possible_slots(&self) -> Option<HashMap<Tile, Slot>> {
+        let mut all: HashMap<Tile, Slot> = HashMap::new();
+        if let Some(edges) = self.edge_slots() {
+            all.extend(edges);
+        }
+        if let Some(wedges) = self.possible_wedge_slots() {
+            all.extend(wedges);
+        }
         if all.is_empty() {
             return None;
         }
@@ -189,17 +193,20 @@ impl Run {
     /// This can only be tiles that are a distance of 2 from either end, beacuse it is
     /// impossible to split into multiple runs using the edge 2 tiles.
     /// i.e. [1,2,3,4,5] -> Only 3, because only [1,2,3] and [3,4,5] is valid
-    pub fn all_possible_wedge_slots(&self) -> Option<HashSet<Tile>> {
-        let tiles = self.decompose();
-        if tiles.len() < MIN_WEDGE_RUN_SPLIT_SIZE {
+    fn possible_wedge_slots(&self) -> Option<HashMap<Tile, Slot>> {
+        let tiles = self.decompose_as_numbers();
+        let run_len = tiles.len();
+        if run_len < MIN_WEDGE_RUN_SPLIT_SIZE {
             return None;
         }
         let border = MIN_RUN_SIZE - 1;
-        // alternative implementation is to skip(2), and take(len - 4)
 
-        let wedges: HashSet<Tile> = tiles[border..tiles.len() - border]
-            .iter()
-            .cloned()
+        // Alternative slicing impl = tiles[border..tiles.len() - border]
+        let wedges: HashMap<Tile, Slot> = tiles
+            .into_iter()
+            .skip(border)
+            .take(run_len - border * 2)
+            .map(|(n, p)| (RegularTile(self.color, n), Wedge(p)))
             .collect();
 
         if wedges.is_empty() {
@@ -211,8 +218,8 @@ impl Run {
     /// If the given tile is an acceptable wedge tile, will split the run into two
     /// and insert that tile on the indicated index to split the runs.
     /// Returns None if tile cannot be wedged in, or if no wedge is possible
-    pub fn insert_wedge_and_split(&self, wedge: Tile, position: usize) -> Option<(Run, Run)> {
-        if !self.all_possible_wedge_slots()?.contains(&wedge) {
+    fn insert_wedge_and_split(&self, wedge: Tile, position: usize) -> Option<(Run, Run)> {
+        if !self.possible_wedge_slots()?.contains_key(&wedge) {
             return None;
         }
         let tiles = self.decompose();
@@ -231,14 +238,22 @@ impl Run {
 
     /// Accepts a candidate tile, and an indication of which side of the run to try to add it
     /// to. If allowed, it will give back a modified version of the run
-    pub fn insert_tile_on_edge(&self, tile: Tile, edge: Edge) -> Option<Run> {
-        if tile.is_joker() || self.edge_slots()?.get(&tile)? == &edge {
+    /// If adding to the middle, it is a wedge tile, and the run will be split into two
+    pub fn insert_tile(&self, tile: Tile, slot: Slot) -> Option<(Run, Option<Run>)> {
+        if tile.is_joker() || self.edge_slots()?.get(&tile)? == &slot {
             let mut tiles = self.decompose();
-            match edge {
+            match slot {
                 Left => tiles.insert(0, tile),
                 Right => tiles.push(tile),
+                Wedge(pos) => {
+                    let (lesser, greater) = self.insert_wedge_and_split(tile, pos)?;
+                    return Some((lesser, Some(greater)));
+                }
             }
-            return Some(Run::parse(&tiles)?);
+            match slot {
+                Left | Right => return Some((Run::parse(&tiles)?, None)),
+                _ => {}
+            }
         }
         None
     }
@@ -326,14 +341,23 @@ impl Run {
         None
     }
 
+    /// If a run is greater than size 6, you can split it and take out some of the middle tiles
+    /// e.g. [1,2,3,4,5,6,7] -> [1,2,3], (4), [5,6,7]
+    /// Nearly Identical to Wedge Slots, with the constraint that you must result in two legal runs
+    fn middle_spares(&self) -> Option<(HashMap<Tile, usize>, (Run, Run))> {
+        todo!()
+    }
+
     /// Returns the set of "spare" tiles, up to the given limit, starting from the right with their
     /// positions in the original run, such that the Run that remains is of the smallest possible size.
     /// Jokers are considered to never be spares, because they must be "retrieved."
     /// e.g. Right [1,2,3,4,5] -> [1,2,3], (4 & 5)
-    pub fn spares_on_edge(&self, edge: Edge, limit: usize) -> Option<(HashMap<Tile, usize>, Run)> {
+    pub fn all_spares(&self, edge: Slot, limit: usize) -> Option<(HashMap<Tile, usize>, Run)> {
         match edge {
             Left => self.left_side_spares(limit),
+            // TODO Add logic for spares in middle
             Right => self.right_side_spares(limit),
+            _ => todo!(),
         }
     }
 
@@ -1001,33 +1025,33 @@ mod other_tests_of_runs {
     #[test]
     pub fn test_all_possible_wedge_tiles() {
         let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
-        assert!(one_two_three.all_possible_wedge_slots().is_none());
+        assert!(one_two_three.possible_wedge_slots().is_none());
 
         let one_thru_five: Run = Run::of(One, Blue, 5).unwrap();
-        let expected = Some(HashSet::from([RegularTile(Blue, Three)]));
-        assert_eq!(one_thru_five.all_possible_wedge_slots(), expected);
+        let expected = Some(HashMap::from([(RegularTile(Blue, Three), Wedge(2))]));
+        assert_eq!(one_thru_five.possible_wedge_slots(), expected);
 
         let one_thru_seven: Run = Run::of(One, Blue, 7).unwrap();
-        let expected = Some(HashSet::from([
-            RegularTile(Blue, Three),
-            RegularTile(Blue, Four),
-            RegularTile(Blue, Five),
+        let expected = Some(HashMap::from([
+            (RegularTile(Blue, Three), Wedge(2)),
+            (RegularTile(Blue, Four), Wedge(3)),
+            (RegularTile(Blue, Five), Wedge(4)),
         ]));
-        assert_eq!(one_thru_seven.all_possible_wedge_slots(), expected);
+        assert_eq!(one_thru_seven.possible_wedge_slots(), expected);
     }
 
     #[test]
     pub fn test_all_possible_tile_slots() {
         let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
-        let expected = Some(HashSet::from([RegularTile(Blue, Four)]));
+        let expected = Some(HashMap::from([(RegularTile(Blue, Four), Right)]));
         assert_eq!(one_two_three.all_possible_slots(), expected);
 
         let five_thru_ten: Run = Run::of(Five, Black, 6).unwrap();
-        let expected = Some(HashSet::from([
-            RegularTile(Black, Four),
-            RegularTile(Black, Seven),
-            RegularTile(Black, Eight),
-            RegularTile(Black, Eleven),
+        let expected = Some(HashMap::from([
+            (RegularTile(Black, Four), Left),
+            (RegularTile(Black, Seven), Wedge(2)),
+            (RegularTile(Black, Eight), Wedge(3)),
+            (RegularTile(Black, Eleven), Right),
         ]));
         assert_eq!(five_thru_ten.all_possible_slots(), expected);
     }
@@ -1173,23 +1197,21 @@ mod other_tests_of_runs {
     #[test]
     pub fn test_insert_tile_on_edge() {
         let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
+        assert!(one_two_three.insert_tile(JokersWild, Left).is_none());
         assert!(one_two_three
-            .insert_tile_on_edge(JokersWild, Left)
-            .is_none());
-        assert!(one_two_three
-            .insert_tile_on_edge(RegularTile(Blue, Four), Left)
+            .insert_tile(RegularTile(Blue, Four), Left)
             .is_none());
 
         let mut expected = Run::of(One, Blue, 4).unwrap();
         assert_eq!(
-            one_two_three.insert_tile_on_edge(RegularTile(Blue, Four), Right),
-            Some(expected.clone())
+            one_two_three.insert_tile(RegularTile(Blue, Four), Right),
+            Some((expected.clone(), None))
         );
 
         expected.jokers.insert(Four);
         assert_eq!(
-            one_two_three.insert_tile_on_edge(JokersWild, Right),
-            Some(expected)
+            one_two_three.insert_tile(JokersWild, Right),
+            Some((expected, None))
         );
     }
 
@@ -1202,31 +1224,25 @@ mod other_tests_of_runs {
         let run_remaining = Run::of(Three, Blue, 3).unwrap();
 
         assert_eq!(
-            one_thru_five.spares_on_edge(Left, 2),
+            one_thru_five.all_spares(Left, 2),
             Some((expected.clone(), run_remaining.clone()))
         );
         assert_eq!(
-            one_thru_five.spares_on_edge(Left, 30),
+            one_thru_five.all_spares(Left, 30),
             Some((expected, run_remaining))
         );
-        assert!(one_thru_five.spares_on_edge(Left, 0).is_none());
-        assert!(Run::of(One, Blue, 3)
-            .unwrap()
-            .spares_on_edge(Left, 2)
-            .is_none());
+        assert!(one_thru_five.all_spares(Left, 0).is_none());
+        assert!(Run::of(One, Blue, 3).unwrap().all_spares(Left, 2).is_none());
         let mut with_joke = one_thru_five.clone();
         with_joke.jokers.insert(One);
-        assert!(with_joke.spares_on_edge(Left, 2).is_none());
+        assert!(with_joke.all_spares(Left, 2).is_none());
         with_joke.jokers.remove(&One);
         with_joke.jokers.insert(Two);
-        assert!(with_joke.spares_on_edge(Left, 2).is_some());
+        assert!(with_joke.all_spares(Left, 2).is_some());
         let expected: HashMap<Tile, usize> = HashMap::from([(RegularTile(Blue, One), 0)]);
         let mut remaining = Run::of(Two, Blue, 4).unwrap();
         remaining.jokers.insert(Two);
-        assert_eq!(
-            with_joke.spares_on_edge(Left, 2),
-            Some((expected, remaining))
-        );
+        assert_eq!(with_joke.all_spares(Left, 2), Some((expected, remaining)));
     }
 
     #[test]
@@ -1238,30 +1254,27 @@ mod other_tests_of_runs {
         let run_remaining = Run::of(One, Blue, 3).unwrap();
 
         assert_eq!(
-            one_thru_five.spares_on_edge(Right, 2),
+            one_thru_five.all_spares(Right, 2),
             Some((expected.clone(), run_remaining.clone()))
         );
         assert_eq!(
-            one_thru_five.spares_on_edge(Right, 30),
+            one_thru_five.all_spares(Right, 30),
             Some((expected, run_remaining))
         );
-        assert!(one_thru_five.spares_on_edge(Right, 0).is_none());
+        assert!(one_thru_five.all_spares(Right, 0).is_none());
         assert!(Run::of(One, Blue, 3)
             .unwrap()
-            .spares_on_edge(Right, 2)
+            .all_spares(Right, 2)
             .is_none());
         let mut with_joke = one_thru_five.clone();
         with_joke.jokers.insert(Five);
-        assert!(with_joke.spares_on_edge(Right, 2).is_none());
+        assert!(with_joke.all_spares(Right, 2).is_none());
         with_joke.jokers.remove(&Five);
         with_joke.jokers.insert(Four);
-        assert!(with_joke.spares_on_edge(Right, 2).is_some());
+        assert!(with_joke.all_spares(Right, 2).is_some());
         let expected: HashMap<Tile, usize> = HashMap::from([(RegularTile(Blue, Five), 4)]);
         let mut remaining = Run::of(One, Blue, 4).unwrap();
         remaining.jokers.insert(Four);
-        assert_eq!(
-            with_joke.spares_on_edge(Right, 2),
-            Some((expected, remaining))
-        );
+        assert_eq!(with_joke.all_spares(Right, 2), Some((expected, remaining)));
     }
 }

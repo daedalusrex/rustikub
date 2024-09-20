@@ -129,7 +129,11 @@ impl Group {
         }
     }
 
-    pub fn has_spare(&self) -> bool {
+    pub fn available_slot(&self) -> Tile {
+        todo!()
+    }
+
+    fn has_spare(&self) -> bool {
         self.count().unwrap().0 as usize > MIN_GROUP_SIZE
     }
 

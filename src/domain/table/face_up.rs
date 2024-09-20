@@ -1,5 +1,6 @@
 use crate::domain::sets::Set;
 use crate::domain::tiles::Tile;
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 ///A layout is a selection of certain sets, representing a particular permutation of their possible configuration
@@ -16,7 +17,7 @@ pub struct FaceUpTiles {
 use crate::domain::score_value::ScoringRule::OnTable;
 use crate::domain::score_value::{ScoreValue, ScoringRule};
 use crate::domain::sets::group::Group;
-use crate::domain::sets::run::Run;
+use crate::domain::sets::run::{Run, Slot};
 use crate::domain::tiles::tile_sequence::TileSequence;
 use crate::domain::{Count, Decompose, RummikubError};
 use colored;
@@ -94,6 +95,16 @@ impl FaceUpTiles {
             })
             .cloned()
             .collect()
+    }
+
+    /// What a type signature wow
+    pub fn all_possible_slots(&self) -> Option<HashMap<Tile, Vec<(Slot, &Set)>>> {
+        todo!()
+    }
+
+    /// What a type signature wow
+    pub fn all_spares(&self) -> Option<HashMap<Tile, Vec<&Set>>> {
+        todo!()
     }
 
     #[deprecated]

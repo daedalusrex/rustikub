@@ -35,12 +35,14 @@ fn human_like_algorithm(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceU
     'outer_runs: for run in table.runs() {
         let count = added.len();
         'inner_rack_tiles: for tile in remaining.decompose() {
+            todo!();
             if let Some(edges) = run.edge_slots() {
                 if edges.contains_key(&tile) {
                     let new_run = run
-                        .insert_tile_on_edge(tile, edges[&tile])
+                        .insert_tile(tile, edges[&tile])
                         .expect("Insert Edge Failure");
-                    runs.push(new_run);
+                    // runs.push(new_run); // TODO TEMP DURING BUILD WILL BREAK
+                    todo!("WORKING ON IT");
                     remaining = remaining.remove(&tile).expect("Removal Failure");
                     added.push(tile);
                     /* Original had a bug If you have duplicate tiles (e.g. 2 Red,One in rack)
