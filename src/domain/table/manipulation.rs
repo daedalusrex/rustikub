@@ -6,7 +6,6 @@ use crate::domain::table::face_up::FaceUpTiles;
 use crate::domain::tiles::tile_sequence::{TileSequence, TileSequenceType};
 use crate::domain::tiles::Tile;
 use crate::domain::{Count, Decompose};
-use std::os::unix::raw::time_t;
 
 /// If possible, places one (or more) tiles from the rack into the face up tiles on the table
 /// Returns the new Rack and New Tiles if successful, otherwise returns None,
@@ -25,24 +24,19 @@ fn human_like_algorithm(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceU
     let mut groups: Vec<Group> = vec![];
     let mut runs: Vec<Run> = vec![];
 
-    // todo as iter? -> probably ugly
-    // This too many layers, many logic bugs need redo kinda  lot, break it up and so on
-    // Honestly need to redo Face Up to make modifications and other access actually easier
-    //  -- Modification of a single run etc. Like, with a fucking reference
-    // Hold on there cowboy. making opaque modifications to a referenced run in the table
-    // is an easy way to create invalid states that needs to be checked. Indexing and then resending
-    // update request is also unpleasant though
-    'outer_runs: for run in table.runs() {
+    for run in table.runs() {
         let count = added.len();
         'inner_rack_tiles: for tile in remaining.decompose() {
-            todo!();
-            if let Some(edges) = run.edge_slots() {
+            if let Some(edges) = run.all_possible_slots() {
                 if edges.contains_key(&tile) {
-                    let new_run = run
+                    let insert_result = run
                         .insert_tile(tile, edges[&tile])
                         .expect("Insert Edge Failure");
-                    // runs.push(new_run); // TODO TEMP DURING BUILD WILL BREAK
-                    todo!("WORKING ON IT");
+
+                    if let (ref r_left, Some(r_right)) = insert_result {
+                        runs.push(r_right);
+                    }
+                    runs.push(insert_result.0);
                     remaining = remaining.remove(&tile).expect("Removal Failure");
                     added.push(tile);
                     /* Original had a bug If you have duplicate tiles (e.g. 2 Red,One in rack)
@@ -60,7 +54,7 @@ fn human_like_algorithm(rack: &Rack, table: &FaceUpTiles) -> Option<(Rack, FaceU
         }
     }
 
-    'outer_groups: for group in table.groups() {
+    for group in table.groups() {
         let count = added.len();
         'inner_rack_tiles: for tile in remaining.decompose() {
             if let Some(new_group) = group.insert_tile(&tile) {

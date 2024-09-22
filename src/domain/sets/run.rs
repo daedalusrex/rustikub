@@ -155,8 +155,7 @@ impl Run {
     }
 
     /// Returns open slots where tiles could be attached on either end without splitting the run
-    pub fn edge_slots(&self) -> Option<BTreeMap<Tile, Slot>> {
-        // TODO make private
+    fn edge_slots(&self) -> Option<BTreeMap<Tile, Slot>> {
         let mut slots: BTreeMap<Tile, Slot> = BTreeMap::new();
         if let Some(left) = self.leftmost_open_slot() {
             slots.insert(left, Left);
@@ -240,7 +239,7 @@ impl Run {
     /// to. If allowed, it will give back a modified version of the run
     /// If adding to the middle, it is a wedge tile, and the run will be split into two
     pub fn insert_tile(&self, tile: Tile, slot: Slot) -> Option<(Run, Option<Run>)> {
-        if tile.is_joker() || self.edge_slots()?.get(&tile)? == &slot {
+        if tile.is_joker() || self.all_possible_slots()?.get(&tile)? == &slot {
             let mut tiles = self.decompose();
             match slot {
                 Left => tiles.insert(0, tile),
@@ -355,9 +354,8 @@ impl Run {
     pub fn all_spares(&self, edge: Slot, limit: usize) -> Option<(HashMap<Tile, usize>, Run)> {
         match edge {
             Left => self.left_side_spares(limit),
-            // TODO Add logic for spares in middle
             Right => self.right_side_spares(limit),
-            _ => todo!(),
+            _ => todo!(), // Add logic for spares in middle
         }
     }
 
@@ -1213,6 +1211,20 @@ mod other_tests_of_runs {
             one_two_three.insert_tile(JokersWild, Right),
             Some((expected, None))
         );
+    }
+
+    #[test]
+    pub fn test_insert_failing_wedge_case() {
+        let run = Run::of(Seven, Orange, 6).unwrap();
+        let wedge = RegularTile(Orange, Ten);
+        let s = Wedge(3);
+
+        let expected = Some((
+            Run::of(Seven, Orange, 4).unwrap(),
+            Some(Run::of(Ten, Orange, 3).unwrap()),
+        ));
+        let foo = run.insert_tile(wedge, s);
+        assert_eq!(run.insert_tile(wedge, s), expected);
     }
 
     #[test]
