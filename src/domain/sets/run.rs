@@ -7,7 +7,7 @@ use crate::domain::tiles::tile_sequence::{unique_colors, TileSequence};
 use crate::domain::tiles::Tile;
 use crate::domain::tiles::Tile::{JokersWild, RegularTile};
 use crate::domain::{Decompose, RummikubError};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::vec;
 use ScoringRule::OnTable;
 use Slot::*;
@@ -155,9 +155,9 @@ impl Run {
     }
 
     /// Returns open slots where tiles could be attached on either end without splitting the run
-    pub fn edge_slots(&self) -> Option<HashMap<Tile, Slot>> {
+    pub fn edge_slots(&self) -> Option<BTreeMap<Tile, Slot>> {
         // TODO make private
-        let mut slots: HashMap<Tile, Slot> = HashMap::new();
+        let mut slots: BTreeMap<Tile, Slot> = BTreeMap::new();
         if let Some(left) = self.leftmost_open_slot() {
             slots.insert(left, Left);
         }
@@ -174,8 +174,8 @@ impl Run {
     /// Derived from the rules, this must be the "wedge" tiles that could be duplicated to create
     /// new runs, as well as the edge slots that can be added to the existing runs.
     /// The tiles within a distance of two from the edges cannot be added
-    pub fn all_possible_slots(&self) -> Option<HashMap<Tile, Slot>> {
-        let mut all: HashMap<Tile, Slot> = HashMap::new();
+    pub fn all_possible_slots(&self) -> Option<BTreeMap<Tile, Slot>> {
+        let mut all: BTreeMap<Tile, Slot> = BTreeMap::new();
         if let Some(edges) = self.edge_slots() {
             all.extend(edges);
         }
@@ -193,7 +193,7 @@ impl Run {
     /// This can only be tiles that are a distance of 2 from either end, beacuse it is
     /// impossible to split into multiple runs using the edge 2 tiles.
     /// i.e. [1,2,3,4,5] -> Only 3, because only [1,2,3] and [3,4,5] is valid
-    fn possible_wedge_slots(&self) -> Option<HashMap<Tile, Slot>> {
+    fn possible_wedge_slots(&self) -> Option<BTreeMap<Tile, Slot>> {
         let tiles = self.decompose_as_numbers();
         let run_len = tiles.len();
         if run_len < MIN_WEDGE_RUN_SPLIT_SIZE {
@@ -202,10 +202,10 @@ impl Run {
         let border = MIN_RUN_SIZE - 1;
 
         // Alternative slicing impl = tiles[border..tiles.len() - border]
-        let wedges: HashMap<Tile, Slot> = tiles
+        let wedges: BTreeMap<Tile, Slot> = tiles
             .into_iter()
             .skip(border)
-            .take(run_len - border * 2)
+            .take(run_len - (border * 2))
             .map(|(n, p)| (RegularTile(self.color, n), Wedge(p)))
             .collect();
 
@@ -363,11 +363,11 @@ impl Run {
 
     /// Tile may or may not be Jokers, but this represents the ordered position of Numbers that
     /// are contained within the run, even if one of those numbers has a joker
-    pub fn decompose_as_numbers(&self) -> HashMap<Number, usize> {
+    pub fn decompose_as_numbers(&self) -> BTreeMap<Number, usize> {
         self.number_iter()
             .enumerate()
             .map(|(i, num)| (num, i))
-            .collect::<HashMap<Number, usize>>()
+            .collect::<BTreeMap<Number, usize>>()
     }
 
     /// The only way to "retrieve" the joker is to replace the number
@@ -973,16 +973,16 @@ mod other_tests_of_runs {
 
         assert_eq!(one_thru_thirteen.edge_slots(), None);
 
-        let expected = Some(HashMap::from([(RegularTile(Blue, Four), Right)]));
+        let expected = Some(BTreeMap::from([(RegularTile(Blue, Four), Right)]));
         assert_eq!(one_two_three.edge_slots(), expected);
 
-        let expected = Some(HashMap::from([
+        let expected = Some(BTreeMap::from([
             (RegularTile(Blue, One), Left),
             (RegularTile(Blue, Five), Right),
         ]));
         assert_eq!(two_three_four.edge_slots(), expected);
 
-        let expected = Some(HashMap::from([(RegularTile(Black, Ten), Left)]));
+        let expected = Some(BTreeMap::from([(RegularTile(Black, Ten), Left)]));
         assert_eq!(eleven_twelve_thirteen.edge_slots(), expected);
     }
 
@@ -1028,11 +1028,11 @@ mod other_tests_of_runs {
         assert!(one_two_three.possible_wedge_slots().is_none());
 
         let one_thru_five: Run = Run::of(One, Blue, 5).unwrap();
-        let expected = Some(HashMap::from([(RegularTile(Blue, Three), Wedge(2))]));
+        let expected = Some(BTreeMap::from([(RegularTile(Blue, Three), Wedge(2))]));
         assert_eq!(one_thru_five.possible_wedge_slots(), expected);
 
         let one_thru_seven: Run = Run::of(One, Blue, 7).unwrap();
-        let expected = Some(HashMap::from([
+        let expected = Some(BTreeMap::from([
             (RegularTile(Blue, Three), Wedge(2)),
             (RegularTile(Blue, Four), Wedge(3)),
             (RegularTile(Blue, Five), Wedge(4)),
@@ -1043,11 +1043,11 @@ mod other_tests_of_runs {
     #[test]
     pub fn test_all_possible_tile_slots() {
         let one_two_three: Run = Run::of(One, Blue, 3).unwrap();
-        let expected = Some(HashMap::from([(RegularTile(Blue, Four), Right)]));
+        let expected = Some(BTreeMap::from([(RegularTile(Blue, Four), Right)]));
         assert_eq!(one_two_three.all_possible_slots(), expected);
 
         let five_thru_ten: Run = Run::of(Five, Black, 6).unwrap();
-        let expected = Some(HashMap::from([
+        let expected = Some(BTreeMap::from([
             (RegularTile(Black, Four), Left),
             (RegularTile(Black, Seven), Wedge(2)),
             (RegularTile(Black, Eight), Wedge(3)),
