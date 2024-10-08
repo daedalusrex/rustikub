@@ -2,7 +2,10 @@ use rand::prelude::IteratorRandom;
 use strum::IntoEnumIterator;
 use strum_macros::{EnumCount, EnumIter};
 
-#[derive(EnumIter, EnumCount, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(
+    sqlx::Type, EnumIter, EnumCount, Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Copy, Clone,
+)]
+#[sqlx(type_name = "color")]
 pub enum Color {
     Red,
     Blue,

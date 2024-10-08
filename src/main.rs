@@ -8,6 +8,7 @@ use crate::game_loop::meta::GameConfig;
 
 mod domain;
 mod game_loop;
+mod persistence;
 
 fn main() {
     use game_loop::state::GameState;
