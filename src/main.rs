@@ -4,7 +4,7 @@
 
 extern crate core;
 
-use game_loop::meta::GameConfig;
+use crate::game_loop::meta::GameConfig;
 
 mod domain;
 mod game_loop;

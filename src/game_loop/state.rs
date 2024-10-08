@@ -8,6 +8,7 @@ use crate::domain::tiles::number::Number;
 use crate::domain::tiles::number::Number::*;
 use crate::domain::tiles::Tile;
 use crate::game_loop::meta::GameConfig;
+use crate::game_loop::meta::GameOutcome;
 use std::collections::VecDeque;
 use Tile::RegularTile;
 
