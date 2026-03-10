@@ -1,4 +1,2 @@
 test
-here's another line
 what is the squash behavior look like?
-
